@@ -32,13 +32,13 @@ function group(bids: Bid[], t: string) {
 
 function Stat({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: number; note: string }) {
   return (
-    <div className="card p-5">
-      <p className="flex items-center gap-2 text-sm font-medium text-ink-soft">
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-sunk text-ink">{icon}</span>
+    <div className="card flex flex-col p-4 md:p-5">
+      <p className="flex items-center gap-2 text-xs font-medium text-ink-soft md:text-sm">
+        <span className="hidden h-8 w-8 place-items-center rounded-[10px] bg-sunk text-ink md:grid">{icon}</span>
         {label}
       </p>
-      <p className="mt-4 text-[34px] font-bold leading-none tracking-tight">{value}</p>
-      <p className="mt-2 text-xs text-ink-soft">{note}</p>
+      <p className="display mt-auto pt-3 text-3xl font-semibold leading-none tracking-tight md:pt-5 md:text-4xl">{value}</p>
+      <p className="mt-2 hidden text-xs text-ink-soft md:block">{note}</p>
     </div>
   );
 }
@@ -63,13 +63,16 @@ export default async function BidBoard({ searchParams }: PageProps<"/bids">) {
 
   return (
     <div className="flex flex-col gap-3 md:gap-4">
-      <div className="px-1 pt-1">
-        <h1 className="text-2xl font-bold tracking-tight md:text-[28px]">Bid board</h1>
-        <p className="mt-1 text-sm text-ink-soft">Every invitation Bid Desk has read, with its first read on each. You make the call.</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-        <Stat icon={<IconLayers />} label="Waiting on you" value={waiting} note={`${all.length} invitations read`} />
+      <div className="grid grid-cols-3 gap-3 md:gap-4 lg:grid-cols-[1.35fr_1fr_1fr_1fr]">
+        <section className="card col-span-3 flex flex-col bg-lime p-6 text-ink lg:col-span-1">
+          <h1 className="text-[26px] font-semibold leading-tight tracking-tight md:text-3xl">Bid board</h1>
+          <p className="mt-1 max-w-[34ch] text-sm text-ink/75">Every invitation Bid Desk has read, with its first read on each. You make the call.</p>
+          <div className="mt-auto flex items-end gap-3 pt-6">
+            <IconLayers className="mb-1.5" />
+            <p className="display text-5xl font-semibold leading-none tracking-tight">{waiting}</p>
+            <p className="pb-1 text-sm font-medium">waiting on you<br /><span className="text-ink/70">of {all.length} read</span></p>
+          </div>
+        </section>
         <Stat icon={<IconClock />} label="Due this week" value={thisWeek} note="Not counting passes" />
         <Stat icon={<IconCheck />} label="Look like a bid" value={looksGood} note="Fit your rules, still undecided" />
         <Stat icon={<IconCalendar />} label="Bidding" value={bidding} note="Marked by your team" />
@@ -79,8 +82,8 @@ export default async function BidBoard({ searchParams }: PageProps<"/bids">) {
 
       <section className="card p-3 md:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3 px-2 pt-1">
-          <h2 className="text-lg font-bold tracking-tight">{q ? `Results for "${q}"` : "Invitations"}</h2>
-          <nav aria-label="Filter bids" className="flex flex-wrap gap-1 rounded-full bg-sunk p-1">
+          <h2 className="text-lg font-semibold tracking-tight">{q ? `Results for "${q}"` : "Invitations"}</h2>
+          <nav aria-label="Filter bids" className="flex flex-wrap gap-1 rounded-[12px] bg-sunk p-1">
             {VIEWS.map((v) => {
               const count = v.key === "all" ? all.length : all.filter((b) => b.decision === v.key).length;
               const active = v.key === view;
@@ -89,7 +92,7 @@ export default async function BidBoard({ searchParams }: PageProps<"/bids">) {
                   key={v.key}
                   href={`/bids?view=${v.key}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${active ? "bg-panel text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
+                  className={`press rounded-[9px] px-3 py-1.5 text-xs font-semibold ${active ? "bg-panel text-ink shadow-[0_1px_2px_rgb(21_24_28/0.08)]" : "text-ink-soft hover:text-ink"}`}
                 >
                   {v.label} {count}
                 </Link>
@@ -120,7 +123,7 @@ export default async function BidBoard({ searchParams }: PageProps<"/bids">) {
                   <li key={b.id}>
                     <Link
                       href={`/bids/${b.id}`}
-                      className="grid items-center gap-x-5 gap-y-2 rounded-2xl px-2 py-3 hover:bg-sunk md:grid-cols-[minmax(0,1fr)_150px_220px_100px]"
+                      className="press grid items-center gap-x-5 gap-y-2 rounded-[14px] px-2 py-3 hover:bg-sunk md:grid-cols-[minmax(0,1fr)_150px_220px_100px]"
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <GcMark name={b.gcName ?? b.requestedBy} />
@@ -136,7 +139,7 @@ export default async function BidBoard({ searchParams }: PageProps<"/bids">) {
                         </div>
                       </div>
                       <div className="pl-[52px] md:pl-0">
-                        <p className={`text-sm font-bold ${due.late ? "text-stop" : ""}`}>{due.when}</p>
+                        <p className={`display text-sm font-semibold ${due.late ? "text-stop" : ""}`}>{due.when}</p>
                         <p className="text-xs text-ink-soft">{due.date}</p>
                       </div>
                       <div className="pl-[52px] md:pl-0">

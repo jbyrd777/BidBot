@@ -1,65 +1,95 @@
 @import "tailwindcss";
+@import "@fontsource-variable/outfit";
+@import "@fontsource-variable/work-sans";
 
+/*
+ * Bid Desk tokens. One accent (lime). One cool gray family.
+ * Radius steps: container 20, tile 12, control 10, chip 6.
+ */
 @theme {
-  --color-paper: #eceef0;
+  --color-paper: #eceef1;
   --color-panel: #ffffff;
-  --color-sunk: #f4f5f6;
-  --color-ink: #16191c;
-  --color-ink-soft: #7a8188;
-  --color-rule: #e6e8ea;
-  --color-lime: #a6d84a;
-  --color-lime-deep: #6e9d1f;
-  --color-sun: #f2c94c;
-  --color-ember: #f2994a;
-  --color-plan: #16191c;
-  --color-chalk: #a6d84a;
-  --color-go: #5f8f17;
-  --color-stop: #d0533f;
-  --color-hold: #b98a10;
-  --radius-card: 18px;
-  --font-sans: "Inter", "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --color-sunk: #f3f5f7;
+  --color-ink: #15181c;
+  --color-ink-soft: #69717b;
+  --color-rule: #e3e6ea;
+  --color-lime: #b4dc5f;
+  --color-lime-deep: #4f7413;
+  --color-lime-wash: #eef7dc;
+  --color-stop: #b8432f;
+  --radius-card: 20px;
+  --font-sans: "Work Sans Variable", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Outfit Variable", "Work Sans Variable", system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-paper: #0f1113;
-    --color-panel: #1a1d20;
-    --color-sunk: #23272b;
-    --color-ink: #f1f3f4;
-    --color-ink-soft: #949ba2;
-    --color-rule: #2a2f33;
-    --color-plan: #f1f3f4;
-    --color-go: #a6d84a;
-    --color-stop: #f08a77;
-    --color-hold: #f2c94c;
+    --color-paper: #0e1013;
+    --color-panel: #181b1f;
+    --color-sunk: #21252a;
+    --color-ink: #eef1f4;
+    --color-ink-soft: #9aa2ab;
+    --color-rule: #2b3036;
+    --color-lime-deep: #c7e88a;
+    --color-lime-wash: #26301a;
+    --color-stop: #f0937f;
   }
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-feature-settings: "tnum" 1, "cv11" 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.card {
-  background: var(--color-panel);
-  border-radius: var(--radius-card);
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+@layer components {
+  .card {
+    background: var(--color-panel);
+    border-radius: var(--radius-card);
+  }
+}
+
+/* A pass is shown by a diagonal hatch, not by color alone. */
+.hatch {
+  background-color: var(--color-sunk);
+  background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-ink-soft) 45%, transparent) 0 1.5px, transparent 1.5px 6px);
+}
+
+.press {
+  transition: transform 160ms ease, background-color 200ms ease, opacity 200ms ease, filter 200ms ease;
+}
+.press:active {
+  transform: scale(0.98);
 }
 
 :focus-visible {
   outline: 2px solid var(--color-lime-deep);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .tick-in {
-    animation: tick-in 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation: tick-in 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
 }
 
 @keyframes tick-in {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .press { transition: none; }
 }

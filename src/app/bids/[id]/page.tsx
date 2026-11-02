@@ -17,7 +17,7 @@ async function setDecision(formData: FormData) {
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl bg-sunk p-4">
+    <div className="rounded-[12px] bg-sunk p-4">
       <dt className="text-xs font-medium text-ink-soft">{label}</dt>
       <dd className="mt-1.5 text-[15px] font-semibold">{children}</dd>
     </div>
@@ -38,16 +38,16 @@ export default async function BidPage({ params }: PageProps<"/bids/[id]">) {
 
   return (
     <div className="flex flex-col gap-3 md:gap-4">
-      <Link href="/bids" className="flex w-fit items-center gap-1 px-1 pt-1 text-sm font-medium text-ink-soft hover:text-ink">
+      <Link href="/bids" className="press flex w-fit items-center gap-1 px-1 text-sm font-medium text-ink-soft hover:text-ink">
         <IconArrowLeft className="h-4 w-4" /> Bid board
       </Link>
 
       <div className="grid gap-3 md:gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <section className="card p-5 md:p-7">
           <div className="flex items-start gap-4">
-            <GcMark name={sender} />
+            <GcMark name={sender} size="lg" />
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight md:text-[28px]">{bid.projectName}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{bid.projectName}</h1>
               <p className="mt-1 text-sm text-ink-soft">
                 {bid.packageName ? `${bid.packageName} package for ` : ""}
                 {sender}
@@ -96,14 +96,14 @@ export default async function BidPage({ params }: PageProps<"/bids/[id]">) {
               <p className="mb-1 flex items-center justify-between text-sm text-ink-soft">
                 Your call <DecisionText value={bid.decision} />
               </p>
-              <button name="decision" value="bid" className="rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-panel hover:opacity-90">
+              <button name="decision" value="bid" className="press cursor-pointer rounded-[10px] bg-ink px-4 py-2.5 text-sm font-semibold text-panel hover:opacity-90">
                 Bid this job
               </button>
-              <button name="decision" value="no_bid" className="rounded-full bg-sunk px-4 py-2.5 text-sm font-semibold hover:brightness-95">
+              <button name="decision" value="no_bid" className="press cursor-pointer rounded-[10px] bg-sunk px-4 py-2.5 text-sm font-semibold hover:brightness-95">
                 Pass on this job
               </button>
               {bid.decision !== "pending" && (
-                <button name="decision" value="pending" className="mt-1 text-xs font-medium text-ink-soft underline underline-offset-2">
+                <button name="decision" value="pending" className="mt-1 cursor-pointer text-xs font-medium text-ink-soft underline underline-offset-2 hover:text-ink">
                   Undo my call
                 </button>
               )}
@@ -134,7 +134,7 @@ export default async function BidPage({ params }: PageProps<"/bids/[id]">) {
             {bid.links.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2 border-t border-rule pt-4">
                 {bid.links.map((l) => (
-                  <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="rounded-full bg-sunk px-3 py-1.5 text-xs font-semibold hover:brightness-95">
+                  <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="press rounded-md bg-sunk px-2.5 py-1.5 text-xs font-semibold hover:brightness-95">
                     Open {l.label}
                   </a>
                 ))}
@@ -147,7 +147,7 @@ export default async function BidPage({ params }: PageProps<"/bids/[id]">) {
             <ol className="mt-3 space-y-3">
               {[...bid.events].reverse().map((e, i) => (
                 <li key={i} className="flex gap-3">
-                  <span aria-hidden className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${e.kind === "decision" ? "bg-ink" : e.kind === "update" ? "bg-sun" : "bg-lime"}`} />
+                  <span aria-hidden className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-[3px] ${e.kind === "decision" ? "bg-ink" : e.kind === "update" ? "border-2 border-lime-deep" : "bg-lime"}`} />
                   <div>
                     <p className="text-sm">{e.summary}</p>
                     <p className="text-xs text-ink-soft">

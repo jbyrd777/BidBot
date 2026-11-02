@@ -1,13 +1,15 @@
 import { connection } from "next/server";
 import type { Metadata } from "next";
-import { IconBoard, IconMail, IconSearch, IconTeam } from "@/components/icons";
+import Link from "next/link";
+import { IconSearch } from "@/components/icons";
 import { NavLink } from "@/components/nav-link";
 import { getCompany, listBids } from "@/lib/data/store";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bid Desk",
-  description: "Your flooring bid desk, run by a team of bots",
+  title: { default: "Bid Desk", template: "%s | Bid Desk" },
+  description: "Every invitation to bid, read and screened for your flooring team.",
+  openGraph: { title: "Bid Desk", description: "Every invitation to bid, read and screened for your flooring team." },
 };
 
 export const instant = false;
@@ -20,56 +22,43 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full p-3 md:p-4">
-        <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1480px] flex-col gap-3 md:flex-row md:gap-4">
-          <aside className="card flex shrink-0 flex-col p-4 md:w-[232px] md:p-5">
-            <div className="flex items-center gap-2.5 px-1">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-lime text-[13px] font-bold text-ink">{initials}</span>
-              <div className="leading-tight">
-                <p className="text-[15px] font-bold tracking-tight">{company.name}</p>
-                <p className="text-xs text-ink-soft">Bid Desk</p>
-              </div>
-            </div>
+      <body className="min-h-dvh">
+        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-10 focus:rounded-[10px] focus:bg-ink focus:px-4 focus:py-2 focus:text-panel">
+          Skip to content
+        </a>
+        <div className="mx-auto flex max-w-[1360px] flex-col gap-4 px-3 py-3 md:px-6 md:py-5">
+          <header className="card flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 md:px-5">
+            <Link href="/bids" className="flex items-center gap-2.5">
+              <span className="display grid h-9 w-9 place-items-center rounded-[10px] bg-lime text-[13px] font-bold text-ink">{initials}</span>
+              <span className="leading-tight">
+                <span className="display block text-[15px] font-semibold tracking-tight">{company.name}</span>
+                <span className="block text-xs text-ink-soft">Bid Desk</span>
+              </span>
+            </Link>
 
-            <nav className="mt-6 flex gap-1 md:flex-col">
-              <NavLink href="/bids" badge={waiting}>
-                <IconBoard /> Bid board
-              </NavLink>
-              <NavLink href="/">
-                <IconTeam /> Bot team
-              </NavLink>
+            <nav aria-label="Main" className="order-3 flex w-full gap-1 md:order-none md:w-auto">
+              <NavLink href="/bids" badge={waiting}>Bid board</NavLink>
+              <NavLink href="/">Bot team</NavLink>
             </nav>
 
-            <div className="mt-auto hidden rounded-2xl bg-sunk p-4 md:block">
-              <IconMail className="text-ink" />
-              <p className="mt-3 text-sm font-semibold">Connect your bid inbox</p>
-              <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-                Bid Desk is reading sample invitations. Connect Gmail or Outlook to read yours as they arrive.
-              </p>
-              <p className="mt-3 text-xs font-medium text-ink-soft">Coming next</p>
-            </div>
-          </aside>
+            <form action="/bids" role="search" className="order-4 flex min-w-0 basis-full items-center gap-2 rounded-[10px] bg-sunk px-3 py-2 md:order-none md:ml-auto md:max-w-xs md:flex-1 md:basis-auto">
+              <IconSearch className="text-ink-soft" />
+              <label htmlFor="q" className="sr-only">Search bids</label>
+              <input id="q" name="q" type="search" placeholder="Search projects, GCs, cities" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft" />
+              <input type="hidden" name="view" value="all" />
+            </form>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-3 md:gap-4">
-            <header className="card flex items-center gap-3 px-4 py-3">
-              <form action="/bids" className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-sunk px-3 py-2 md:max-w-sm">
-                <IconSearch className="text-ink-soft" />
-                <label htmlFor="q" className="sr-only">Search bids</label>
-                <input id="q" name="q" placeholder="Search projects or GCs" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft" />
-                <input type="hidden" name="view" value="all" />
-              </form>
-              <div className="ml-auto flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-ink text-xs font-semibold text-panel" aria-hidden>
-                  JB
-                </span>
-                <div className="hidden leading-tight sm:block">
-                  <p className="text-sm font-semibold">Jesse Byrd</p>
-                  <p className="text-xs text-ink-soft">Owner</p>
-                </div>
-              </div>
-            </header>
-            <main className="min-w-0 flex-1">{children}</main>
-          </div>
+            <span className="display ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-ink text-xs font-semibold text-panel md:ml-0" title="Jesse Byrd, owner">
+              JB
+            </span>
+          </header>
+
+          <main id="main" className="min-w-0">{children}</main>
+
+          <footer className="flex flex-wrap items-center justify-between gap-2 px-1 pb-2 text-xs text-ink-soft">
+            <span>Bid Desk reads sample invitations until an inbox is connected.</span>
+            <span>Every outbound step waits for a person.</span>
+          </footer>
         </div>
       </body>
     </html>
