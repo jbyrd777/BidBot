@@ -22,6 +22,8 @@ export interface Company {
   id: string;
   name: string;
   settings: ScreenSettings;
+  /** How many bids the team can price in one week; drives the load card on the dashboard. */
+  weeklyCapacity: number;
 }
 
 /**
@@ -37,6 +39,7 @@ const DEMO_COMPANY: Company = {
   id: "demo",
   name: "Demo Flooring Co.",
   settings: { serviceStates: ["FL"], minLeadDays: 3, requireFlooring: true, preferredGcs: [], blockedGcs: [] },
+  weeklyCapacity: 8,
 };
 
 export function today(): string {

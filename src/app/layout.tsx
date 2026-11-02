@@ -1,8 +1,9 @@
+import { Suspense } from "react";
 import { connection } from "next/server";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
-import { MainNav } from "@/components/nav-link";
+import { Bell, MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
+import { MobileNav, Sidebar } from "@/components/sidebar";
 import { getCompany, listBids } from "@/lib/data/store";
 import "./globals.css";
 
@@ -17,55 +18,65 @@ export const instant = false;
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   await connection();
   const company = getCompany();
-  const waiting = listBids().filter((b) => b.decision === "pending").length;
-  const initials = company.name.split(" ").map((w) => w[0]).slice(0, 2).join("");
+  const bids = listBids();
+  const counts = {
+    pending: bids.filter((b) => b.decision === "pending").length,
+    bid: bids.filter((b) => b.decision === "bid").length,
+    no_bid: bids.filter((b) => b.decision === "no_bid").length,
+  };
 
   return (
-    <html lang="en" className="antialiased">
-      <body className="ambient min-h-dvh">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-30 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-core"
-        >
+    <html lang="en">
+      <body className="min-h-dvh">
+        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-30 focus:rounded-[8px] focus:bg-ink focus:px-4 focus:py-2 focus:text-core">
           Skip to content
         </a>
+        <div className="flex">
+          <Suspense fallback={<div className="hidden w-[236px] shrink-0 lg:block" />}>
+            <Sidebar company={company.name} counts={counts} />
+          </Suspense>
 
-        {/* Floating island nav: glass, detached from the top edge, sticky. */}
-        <header className="sticky top-3 z-20 px-3 md:top-4">
-          <div className="glass mx-auto flex w-full max-w-[1180px] flex-wrap items-center gap-x-4 gap-y-2 rounded-[28px] py-2 pl-2 pr-2 md:flex-nowrap md:rounded-full">
-            <Link href="/bids" className="press flex items-center gap-2.5 rounded-full py-1 pl-1 pr-3">
-              <span className="core-lime grid h-9 w-9 place-items-center !rounded-full text-[13px] font-semibold">{initials}</span>
-              <span className="leading-tight">
-                <span className="block text-[14px] font-semibold tracking-tight">{company.name}</span>
-                <span className="block text-[11px] text-ink-soft">Bid Desk</span>
-              </span>
-            </Link>
+          <div className="min-w-0 flex-1 bg-canvas p-3 md:p-5 lg:my-3 lg:mr-3 lg:rounded-[22px]">
+            <header className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 md:gap-3">
+                <Link href="/" className="mr-1 text-[17px] font-bold tracking-[-0.02em] lg:hidden">
+                  {company.name}
+                </Link>
+                <form action="/bids" role="search" className="hidden h-11 w-full max-w-[300px] items-center gap-2 rounded-[10px] bg-core px-3.5 sm:flex">
+                  <MagnifyingGlass size={17} className="shrink-0 text-ink-soft" aria-hidden />
+                  <label htmlFor="q" className="sr-only">
+                    Search bids
+                  </label>
+                  <input id="q" name="q" type="search" placeholder="Quick search" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-ink-soft" />
+                  <input type="hidden" name="view" value="all" />
+                </form>
+                <div className="ml-auto flex items-center gap-2">
+                  <Link
+                    href="/bids?view=pending"
+                    title={`${counts.pending} bids waiting on a call`}
+                    className="press relative grid h-11 w-11 place-items-center rounded-[10px] bg-core hover:bg-sunk"
+                  >
+                    <Bell size={19} aria-hidden />
+                    <span className="sr-only">{counts.pending} bids waiting on a call</span>
+                    {counts.pending > 0 && <span aria-hidden className="absolute right-3 top-3 h-2 w-2 rounded-full bg-ember ring-2 ring-core" />}
+                  </Link>
+                  <span className="flex h-11 items-center gap-2.5 rounded-[10px] bg-core py-1 pl-1.5 pr-3">
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-ink text-[11px] font-semibold text-core">JB</span>
+                    <span className="hidden leading-tight sm:block">
+                      <span className="block text-[13px] font-semibold">Jesse Byrd</span>
+                      <span className="block text-[11px] text-ink-soft">Owner</span>
+                    </span>
+                  </span>
+                </div>
+              </div>
+              <MobileNav counts={counts} />
+            </header>
 
-            <div className="order-3 shrink-0 md:order-none">
-              <MainNav waiting={waiting} />
-            </div>
-
-            <form action="/bids" role="search" className="press order-4 flex h-10 min-w-[120px] flex-1 md:order-none md:ml-auto items-center gap-2 rounded-full bg-core/70 px-3.5 shadow-[inset_0_0_0_1px_var(--color-hairline)] md:max-w-[260px]">
-              <MagnifyingGlass weight="light" size={18} className="shrink-0 text-ink-soft" aria-hidden />
-              <label htmlFor="q" className="sr-only">Search bids</label>
-              <input id="q" name="q" type="search" placeholder="Search bids" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-ink-soft" />
-              <input type="hidden" name="view" value="all" />
-            </form>
-
-            <span className="ml-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink md:ml-0 text-[12px] font-semibold text-core" title="Jesse Byrd, owner">
-              JB
-            </span>
+            <main id="main" className="mt-4 md:mt-5">
+              {children}
+            </main>
           </div>
-        </header>
-
-        <main id="main" className="mx-auto max-w-[1180px] px-3 pb-6 pt-6 md:px-4 md:pt-8">
-          {children}
-        </main>
-
-        <footer className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-2 px-4 pb-8 text-xs text-ink-soft md:px-5">
-          <span>Bid Desk reads sample invitations until an inbox is connected.</span>
-          <span>Every outbound step waits for a person.</span>
-        </footer>
+        </div>
       </body>
     </html>
   );

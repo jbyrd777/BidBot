@@ -6,6 +6,7 @@ const company: Company = {
   id: "t",
   name: "Test",
   settings: { serviceStates: ["WA"], minLeadDays: 3, requireFlooring: true, preferredGcs: [], blockedGcs: [] },
+  weeklyCapacity: 8,
 };
 
 describe("ingest", () => {
