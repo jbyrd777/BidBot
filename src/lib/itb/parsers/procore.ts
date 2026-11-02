@@ -1,5 +1,5 @@
 import { findDateAfter } from "../dates";
-import { flooringScope, placeInProse, stateFrom } from "../scope";
+import { tradeScope, activeTrade, placeInProse, stateFrom } from "../scope";
 import { contactFrom, extractLinks, flatten, projectSf } from "../text";
 import type { InboundEmail, ParsedItb } from "../types";
 
@@ -23,8 +23,10 @@ export function parseProcore(email: InboundEmail, text: string): ParsedItb {
     findDateAfter(flat, /(?:bid )?due(?: date)?:|up until|no later than|bids? (?:are )?due/i, ref) ??
     findDateAfter(description ?? "", /until|by/i, ref);
 
-  // Only the flooring part of an all trades scope list matters to us.
-  const flooringBlock = /Flooring (.+?)(?= FRP| Painting| Drywall| Specialties|$)/.exec(instructions)?.[1] ?? "";
+  // Only our trade's part of an all trades scope list matters. Procore lists each trade by name.
+  const label = activeTrade().name.split(" ")[0];
+  const others = ["Flooring", "FRP", "Painting", "Drywall", "Specialties", "Millwork", "Doors", "Electrical", "Plumbing", "Mechanical", "HVAC", "Fire", "Roofing", "Glazing", "Concrete", "Masonry"].filter((t) => t !== label);
+  const flooringBlock = new RegExp(`${label} (.+?)(?= (?:${others.join("|")})\\b|$)`).exec(instructions)?.[1] ?? "";
   const location = placeInProse(description ?? "") ?? placeInProse(flat);
 
   const contactSection = flat.slice(flat.indexOf("Client Details"));
@@ -44,8 +46,8 @@ export function parseProcore(email: InboundEmail, text: string): ParsedItb {
     state: stateFrom(location),
     due,
     projectSf: projectSf(description ?? ""),
-    flooringScope: flooringScope(flooringBlock || instructions),
-    trades: flooringBlock ? ["Flooring"] : [],
+    scope: tradeScope(flooringBlock || instructions),
+    trades: flooringBlock ? [activeTrade().name] : [],
     links: extractLinks(text),
     description,
   };

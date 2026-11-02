@@ -1,5 +1,7 @@
 import { allFixtures } from "@/lib/itb/__fixtures__/emails";
 import { parseItbEmail, projectKey, type InboundEmail, type ParsedItb } from "@/lib/itb";
+import { withTrade } from "@/lib/itb/scope";
+import { tradeProfile } from "@/lib/trades";
 import { screenItb, type ScreenResult, type ScreenSettings } from "@/lib/itb/screen";
 
 export type Decision = "pending" | "bid" | "no_bid";
@@ -22,6 +24,8 @@ export interface Company {
   id: string;
   name: string;
   settings: ScreenSettings;
+  /** Trade profile key; drives scope reading and wording everywhere. */
+  trade: string;
   /** How many bids the team can price in one week; drives the load card on the dashboard. */
   weeklyCapacity: number;
 }
@@ -38,7 +42,8 @@ interface State {
 const DEMO_COMPANY: Company = {
   id: "demo",
   name: "Demo Flooring Co.",
-  settings: { serviceStates: ["FL"], minLeadDays: 3, requireFlooring: true, preferredGcs: [], blockedGcs: [] },
+  settings: { serviceStates: ["FL"], minLeadDays: 3, requireTradeMention: true, preferredGcs: [], blockedGcs: [], trade: "flooring" },
+  trade: "flooring",
   weeklyCapacity: 8,
 };
 
@@ -66,8 +71,7 @@ function eventFor(itb: ParsedItb): BidEvent {
 
 /** Add parsed invitations to the board, folding updates and reminders into the bid they belong to. */
 export function ingest(state: State, emails: InboundEmail[]) {
-  const parsed = emails
-    .flatMap(parseItbEmail)
+  const parsed = withTrade(state.company.trade, () => emails.flatMap(parseItbEmail))
     .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
 
   for (const itb of parsed) {
@@ -81,7 +85,7 @@ export function ingest(state: State, emails: InboundEmail[]) {
       if (itb.due) existing.due = itb.due;
       if (itb.jobWalk) existing.jobWalk = itb.jobWalk;
       if (itb.rfiDue) existing.rfiDue = itb.rfiDue;
-      existing.flooringScope = [...new Set([...existing.flooringScope, ...itb.flooringScope])];
+      existing.scope = [...new Set([...existing.scope, ...itb.scope])];
       existing.events.push(eventFor(itb));
       existing.screen = screenItb(existing, state.company.settings, today());
       continue;
@@ -112,6 +116,11 @@ export function getCompany(): Company {
   return state().company;
 }
 
+/** The company's trade profile, for wording and scope rules. */
+export function trade() {
+  return tradeProfile(state().company.trade);
+}
+
 export function listBids(): Bid[] {
   return [...state().bids].sort((a, b) => (a.due?.date ?? "9999").localeCompare(b.due?.date ?? "9999"));
 }
@@ -128,4 +137,13 @@ export function decide(id: string, decision: Decision): Bid | undefined {
   const label = { bid: "Marked as bidding", no_bid: "Marked as not bidding", pending: "Moved back to undecided" }[decision];
   bid.events.push({ at: bid.decidedAt, kind: "decision", summary: label });
   return bid;
+}
+
+/** Read the invitations again after the trade changes, so scope and screening follow the new trade. Calls already made are kept. */
+export function reread() {
+  const s = state();
+  const calls = new Map(s.bids.map((b) => [b.id, { decision: b.decision, decidedAt: b.decidedAt }]));
+  s.bids = [];
+  ingest(s, allFixtures);
+  for (const b of s.bids) Object.assign(b, calls.get(b.id) ?? {});
 }

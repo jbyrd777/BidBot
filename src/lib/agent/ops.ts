@@ -1,5 +1,5 @@
 import { formatDue } from "@/components/labels";
-import { getCompany, listBids, today, type Bid, type Decision } from "@/lib/data/store";
+import { getCompany, listBids, today, trade, type Bid, type Decision } from "@/lib/data/store";
 import { projectKey } from "@/lib/itb";
 import { daysBetween } from "@/lib/itb/dates";
 import type { Recommendation } from "@/lib/itb/screen";
@@ -24,7 +24,7 @@ export function card(b: Bid): BidCard {
     recommendation: b.screen.recommendation,
     reason: b.screen.reasons[0] ?? "",
     decision: b.decision,
-    scope: b.flooringScope,
+    scope: b.scope,
   };
 }
 
@@ -95,7 +95,7 @@ export function draftEmail(b: Bid, purpose: EmailPurpose) {
       subject: `Plans and specs for ${job}`,
       lines: [
         hello,
-        `Thank you for the invitation to bid ${job}. Could you send the plans, the finish schedule and the flooring specifications, or a link to the drawings?`,
+        `Thank you for the invitation to bid ${job}. Could you send the plans, the finish schedule and the ${trade().noun} specifications, or a link to the drawings?`,
         due ? `We are working toward the ${due} bid date and want to make sure our number covers the full scope.` : "Please also confirm the bid date when you have a moment.",
         "Thank you,",
         company,
@@ -103,15 +103,15 @@ export function draftEmail(b: Bid, purpose: EmailPurpose) {
     },
     intent: {
       subject: `Intent to bid: ${job}`,
-      lines: [hello, `${company} plans to submit a flooring number for ${job}${due ? ` by ${due}` : ""}.`, "Please keep us on the bidders list for addenda and any questions.", "Thank you,", company],
+      lines: [hello, `${company} plans to submit a ${trade().noun} number for ${job}${due ? ` by ${due}` : ""}.`, "Please keep us on the bidders list for addenda and any questions.", "Thank you,", company],
     },
     decline: {
       subject: `${job}: not bidding this one`,
-      lines: [hello, `Thank you for thinking of ${company} for ${job}. We will pass on this one, but we would like to stay on your list for future flooring work.`, "Thank you,", company],
+      lines: [hello, `Thank you for thinking of ${company} for ${job}. We will pass on this one, but we would like to stay on your list for future ${trade().noun} work.`, "Thank you,", company],
     },
     followup: {
       subject: `Following up on ${job}`,
-      lines: [hello, `Following up on our flooring number for ${job}. Is there anything you need from us, and do you have a sense of timing on the award?`, "Thank you,", company],
+      lines: [hello, `Following up on our ${trade().noun} number for ${job}. Is there anything you need from us, and do you have a sense of timing on the award?`, "Thank you,", company],
     },
   };
   const d = bodies[purpose];

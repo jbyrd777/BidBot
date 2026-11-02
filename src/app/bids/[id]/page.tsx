@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowSquareOut, Check, X, ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr";
 import { DecisionText, GcMark, RecommendationTag, ScopeChips, formatDue } from "@/components/labels";
-import { getBid, today } from "@/lib/data/store";
+import { getBid, today, trade } from "@/lib/data/store";
 import { setDecision } from "@/app/actions";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -60,9 +60,9 @@ export default async function BidPage({ params }: PageProps<"/bids/[id]">) {
             </dl>
 
             <div className="mt-7">
-              <h2 className="text-[14px] font-semibold">Flooring scope</h2>
+              <h2 className="text-[14px] font-semibold">{trade().name} scope</h2>
               <div className="mt-2">
-                <ScopeChips scope={bid.flooringScope} />
+                <ScopeChips scope={bid.scope} />
               </div>
             </div>
 

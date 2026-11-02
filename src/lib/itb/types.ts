@@ -57,7 +57,7 @@ export interface ParsedItb {
   rfiDue?: DueDate;
   startDate?: DueDate;
   projectSf?: number;
-  flooringScope: string[];
+  scope: string[];
   trades: string[];
   links: ItbLink[];
   description?: string;

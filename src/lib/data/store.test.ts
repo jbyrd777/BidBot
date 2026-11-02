@@ -5,7 +5,8 @@ import { bcInviteRaisingCanes } from "@/lib/itb/__fixtures__/emails";
 const company: Company = {
   id: "t",
   name: "Test",
-  settings: { serviceStates: ["WA"], minLeadDays: 3, requireFlooring: true, preferredGcs: [], blockedGcs: [] },
+  settings: { serviceStates: ["WA"], minLeadDays: 3, requireTradeMention: true, preferredGcs: [], blockedGcs: [] },
+  trade: "flooring",
   weeklyCapacity: 8,
 };
 

@@ -19,7 +19,7 @@ export interface BotDef {
   status: BotStatus;
 }
 
-/** The default team every flooring company starts with. Names and status are company settings. */
+/** The default team every subcontractor starts with. Names and status are company settings. */
 export const DEFAULT_ROSTER: BotDef[] = [
   {
     kind: "bid_desk",

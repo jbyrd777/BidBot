@@ -40,7 +40,7 @@ export function parseBatch(email: InboundEmail, text: string): ParsedItb[] {
       due,
       state,
       location: state ? `${state}, per the client's note` : undefined,
-      flooringScope: [],
+      scope: [],
       trades: [],
       links: [],
       notes: [`Owner at client: ${owner.trim()}`, note?.trim()].filter(Boolean).join(". "),

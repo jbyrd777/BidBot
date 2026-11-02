@@ -1,5 +1,5 @@
 import { findDateAfter } from "../dates";
-import { flooringScope, stateFrom, trimCountry } from "../scope";
+import { tradeScope, stateFrom, trimCountry } from "../scope";
 import { contactFrom, extractLinks, flatten, projectSf } from "../text";
 import type { InboundEmail, ItbKind, ParsedItb } from "../types";
 
@@ -74,7 +74,7 @@ export function parseBuildingConnected(email: InboundEmail, text: string): Parse
     jobWalk,
     rfiDue,
     projectSf: projectSf(flat),
-    flooringScope: flooringScope(scopeText),
+    scope: tradeScope(scopeText),
     trades: packageName ? [packageName] : [],
     links: extractLinks(text),
     description: description?.replace(/\.\.\.$/, "…"),

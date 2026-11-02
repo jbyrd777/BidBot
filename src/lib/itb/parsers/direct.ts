@@ -1,5 +1,5 @@
 import { findDate, findDateAfter } from "../dates";
-import { flooringScope, placeInProse, stateFrom } from "../scope";
+import { tradeScope, placeInProse, stateFrom } from "../scope";
 import { cleanSubject, companyFromDomain, contactFrom, extractLinks, flatten, projectSf } from "../text";
 import type { InboundEmail, ParsedItb } from "../types";
 
@@ -39,7 +39,7 @@ export function parseDirect(email: InboundEmail, text: string): ParsedItb {
     state: stateFrom(location) ?? stateFrom(projectName),
     due,
     projectSf: projectSf(flat),
-    flooringScope: flooringScope(scopeLine ?? flat),
+    scope: tradeScope(scopeLine ?? flat),
     trades: scopeLine ? [scopeLine] : [],
     links: extractLinks(text),
     description: labelled(/Project Type/),

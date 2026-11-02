@@ -43,7 +43,7 @@ describe("BuildingConnected", () => {
     });
     expect(itb.location).toBe("1075 South Burlington Boulevard, Burlington, WA 98233");
     expect(itb.contact).toMatchObject({ name: "Jeff Giddings", title: "Owner", email: "jeff@example-radix.com" });
-    expect(itb.flooringScope).toContain("Tile");
+    expect(itb.scope).toContain("Tile");
     expect(itb.links[0]).toMatchObject({ label: "BuildingConnected" });
     expect(itb.links.some((l) => l.url.includes("state="))).toBe(false);
   });
@@ -91,8 +91,8 @@ describe("ConstructConnect", () => {
       startDate: { date: "2027-01-11" },
       projectSf: 10703,
     });
-    expect(itb.flooringScope).toEqual(expect.arrayContaining(["LVT", "VCT", "Wood"]));
-    expect(itb.flooringScope).not.toContain("Resilient");
+    expect(itb.scope).toEqual(expect.arrayContaining(["LVT", "VCT", "Wood"]));
+    expect(itb.scope).not.toContain("Resilient");
     expect(itb.contact).toMatchObject({ name: "Annie Esterling", email: "annie@example-pinnacle.com" });
   });
 });
@@ -112,7 +112,7 @@ describe("Procore", () => {
       projectSf: 15386,
     });
     expect(itb.location).toBe("Immokalee, Florida");
-    expect(itb.flooringScope).toEqual(expect.arrayContaining(["VCT", "LVT", "Carpet", "Resinous", "Base"]));
+    expect(itb.scope).toEqual(expect.arrayContaining(["VCT", "LVT", "Carpet", "Resinous", "Base"]));
     expect(itb.contact).toMatchObject({ name: "Mason Dean", email: "mason@example-heatherwood.com" });
   });
 });
@@ -140,7 +140,7 @@ describe("direct GC email", () => {
       due: { date: "2026-11-06" },
     });
     expect(itb.location).toContain("Fort Myers, FL 33905");
-    expect(itb.flooringScope).toEqual(expect.arrayContaining(["VCT", "Tile"]));
+    expect(itb.scope).toEqual(expect.arrayContaining(["VCT", "Tile"]));
     expect(itb.contact).toMatchObject({ name: "Scarlett Dresen", title: "Pre-Construction, Bid Coordinator" });
     expect(itb.links[0]).toMatchObject({ label: "Dropbox" });
   });
@@ -165,7 +165,7 @@ describe("client job list", () => {
 });
 
 describe("screening", () => {
-  const settings = { serviceStates: ["FL"], minLeadDays: 3, requireFlooring: true, preferredGcs: [], blockedGcs: [] };
+  const settings = { serviceStates: ["FL"], minLeadDays: 3, requireTradeMention: true, preferredGcs: [], blockedGcs: [] };
 
   it("recommends bidding when the job fits", () => {
     const r = screenItb(one(fx.procoreImmokalee), settings, "2026-11-02");

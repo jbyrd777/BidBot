@@ -53,13 +53,13 @@ export function serviceAreaFit(bids: Bid[], company: Company) {
   return { inside: inside.length, known: known.length, unknown: bids.length - known.length };
 }
 
-/** Share of each flooring type across all invitations; a bid naming two types counts toward both. */
+/** Share of each scope item across all invitations; a bid naming two types counts toward both. */
 export function scopeMix(bids: Bid[]) {
   const tally = new Map<string, number>();
   let notStated = 0;
   for (const b of bids) {
-    if (!b.flooringScope.length) notStated++;
-    for (const s of b.flooringScope) tally.set(s, (tally.get(s) ?? 0) + 1);
+    if (!b.scope.length) notStated++;
+    for (const s of b.scope) tally.set(s, (tally.get(s) ?? 0) + 1);
   }
   const sorted = [...tally.entries()].sort((a, b) => b[1] - a[1]);
   const top = sorted.slice(0, 5);

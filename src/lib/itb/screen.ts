@@ -1,10 +1,13 @@
 import { daysBetween } from "./dates";
 import type { ParsedItb } from "./types";
+import { tradeProfile } from "@/lib/trades";
 
 export interface ScreenSettings {
   serviceStates: string[];
   minLeadDays: number;
-  requireFlooring: boolean;
+  requireTradeMention: boolean;
+  /** Trade profile key; see lib/trades. */
+  trade?: string;
   preferredGcs: string[];
   blockedGcs: string[];
 }
@@ -43,12 +46,12 @@ export function screenItb(itb: ParsedItb, settings: ScreenSettings, today: strin
     else goods.push(`Due in ${days} days`);
   }
 
-  if (settings.requireFlooring) {
+  if (settings.requireTradeMention) {
     const pkg = [itb.packageName, ...itb.trades].filter(Boolean).join(" ");
-    if (itb.flooringScope.length) goods.push(`Flooring scope: ${itb.flooringScope.join(", ")}`);
-    else if (/floor|tile|resilient|carpet/i.test(pkg)) goods.push(`Invited to the ${itb.packageName ?? "flooring"} package; materials to confirm in the plans`);
+    if (itb.scope.length) goods.push(`${tradeProfile(settings.trade).name} scope: ${itb.scope.join(", ")}`);
+    else if (tradeProfile(settings.trade).mention.test(pkg)) goods.push(`Invited to the ${itb.packageName ?? tradeProfile(settings.trade).noun} package; scope to confirm in the plans`);
     else if (itb.kind === "batch_item") goods.push("Sent in a job list; confirm scope in the plans");
-    else gaps.push("Flooring scope not confirmed in the invitation");
+    else gaps.push(`${tradeProfile(settings.trade).name} scope not confirmed in the invitation`);
   }
 
   if (stops.length) return { recommendation: "no_bid", reasons: [...stops, ...gaps] };

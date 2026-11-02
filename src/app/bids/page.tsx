@@ -115,7 +115,7 @@ export default async function BidList({ searchParams }: PageProps<"/bids">) {
                         </p>
                         <p className="truncate text-[11px] text-ink-soft">{[b.gcName ?? b.requestedBy, b.location].filter(Boolean).join(", ")}</p>
                         <div className="mt-1">
-                          <ScopeChips scope={b.flooringScope} />
+                          <ScopeChips scope={b.scope} />
                         </div>
                       </div>
                     </div>

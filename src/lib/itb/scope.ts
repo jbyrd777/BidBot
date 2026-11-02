@@ -1,32 +1,33 @@
-/** Flooring scope and location detection shared by every parser. */
+import { DEFAULT_TRADE, tradeProfile } from "@/lib/trades";
 
-const SCOPE_RULES: [string, RegExp][] = [
-  ["Carpet tile", /carpet\s*tile|\bCPT[- ]?\d|modular carpet/i],
-  ["Carpet", /broadloom|carpet\b(?!\s*tile)/i],
-  ["LVT", /\bLVT\b|luxury vinyl|vinyl tile flooring|096519\.23/i],
-  ["VCT", /\bVCT\b|vinyl composition|096519\.19/i],
-  ["Sheet vinyl", /sheet vinyl|homogeneous|heterogeneous|096516/i],
-  ["Rubber", /rubber (flooring|tile|sheet)|096516\.13/i],
-  ["Resilient", /resilient|096500/i],
-  ["Tile", /\btile\b(?!\s*ceiling)|porcelain|ceramic|093000/i],
-  ["Wood", /wood flooring|hardwood|096400/i],
-  ["Resinous", /epoxy|resinous|urethane cement|096700/i],
-  ["Polished concrete", /polished concrete|concrete polish/i],
-  ["Base", /vinyl base|rubber base|resilient base|096513/i],
-  ["Floor prep", /floor (demo|prep|leveling)|self[- ]level|moisture mitigation|moisture test/i],
-];
+/** Scope and location detection shared by every parser. Scope is read through the company's trade profile. */
 
-export function flooringScope(text: string): string[] {
-  const found = SCOPE_RULES.filter(([, re]) => re.test(text)).map(([name]) => name);
-  // "Resilient" is the parent of VCT, LVT, sheet and rubber; drop it when a child is named.
-  if (found.some((f) => ["LVT", "VCT", "Sheet vinyl", "Rubber"].includes(f))) {
-    return found.filter((f) => f !== "Resilient");
+let active = DEFAULT_TRADE;
+
+/** Parse with a given trade's profile. Each company ingests its own mail, so the trade is set per run. */
+export function withTrade<T>(trade: string, fn: () => T): T {
+  const prev = active;
+  active = trade;
+  try {
+    return fn();
+  } finally {
+    active = prev;
   }
+}
+
+export function activeTrade() {
+  return tradeProfile(active);
+}
+
+export function tradeScope(text: string): string[] {
+  const p = tradeProfile(active);
+  const found = p.rules.filter(([, re]) => re.test(text)).map(([name]) => name);
+  if (p.drop && found.some((f) => p.drop!.whenAny.includes(f))) return found.filter((f) => f !== p.drop!.parent);
   return found;
 }
 
-export function mentionsFlooring(text: string): boolean {
-  return /flooring|floor covering|finishes|all trades|096\d{3}|09 6\d/i.test(text) || flooringScope(text).length > 0;
+export function mentionsTrade(text: string): boolean {
+  return tradeProfile(active).mention.test(text) || tradeScope(text).length > 0;
 }
 
 const STATES: Record<string, string> = {

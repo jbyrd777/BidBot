@@ -1,3 +1,4 @@
+import { trade } from "@/lib/data/store";
 import type { Bid } from "@/lib/data/store";
 import { card, draftEmail, findBid, findGcBids, searchBids, weekSummary, type EmailPurpose } from "./ops";
 import type { ChatReply } from "./types";
@@ -87,7 +88,7 @@ export function localReply(message: string): ChatReply {
     const facts = [
       `${bid.projectName}${c.gc ? ` from ${c.gc}` : ""}${bid.location ? `, ${bid.location}` : ""}.`,
       c.due ? `Due ${c.dueWhen.toLowerCase()} (${c.due}).` : "No due date in the invitation.",
-      bid.flooringScope.length ? `Scope named: ${bid.flooringScope.join(", ")}.` : "The invitation does not name the flooring scope.",
+      bid.scope.length ? `Scope named: ${bid.scope.join(", ")}.` : `The invitation does not name the ${trade().noun} scope.`,
       `First read: ${bid.screen.reasons.join("; ")}.`,
     ];
     return { from: "Bid Desk", text: facts.join(" "), blocks: [{ type: "bids", title: "This bid", bids: [c] }] };

@@ -1,5 +1,5 @@
 import { findDateAfter } from "../dates";
-import { flooringScope, stateFrom } from "../scope";
+import { tradeScope, stateFrom } from "../scope";
 import { contactFrom, extractLinks, flatten, projectSf } from "../text";
 import type { InboundEmail, ParsedItb } from "../types";
 
@@ -41,7 +41,7 @@ export function parseConstructConnect(email: InboundEmail, text: string): Parsed
     due,
     startDate,
     projectSf: projectSf(description ?? flat),
-    flooringScope: flooringScope(trades.join(" ") + " " + (description ?? "")),
+    scope: tradeScope(trades.join(" ") + " " + (description ?? "")),
     trades,
     links: extractLinks(text),
     description,
