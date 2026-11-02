@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  --color-paper: #f6f7f6;
+  --color-panel: #ffffff;
+  --color-ink: #1f2b30;
+  --color-ink-soft: #55656b;
+  --color-rule: #d4d9d8;
+  --color-plan: #2a5db0;
+  --color-chalk: #d9a21b;
+  --color-go: #2e7a4f;
+  --color-stop: #9e3434;
+  --color-hold: #8a6a12;
+  --font-sans: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-paper: #141b1e;
+    --color-panel: #1b2428;
+    --color-ink: #e7ecec;
+    --color-ink-soft: #9aabb0;
+    --color-rule: #2f3c41;
+    --color-plan: #7aa6f0;
+    --color-chalk: #e8b53a;
+    --color-go: #6cc08f;
+    --color-stop: #e07a7a;
+    --color-hold: #e2c066;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-plan);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tick-in {
+    animation: tick-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
+@keyframes tick-in {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
 }
