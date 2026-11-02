@@ -12,7 +12,7 @@ The first working piece of the flooring bot team: a multi tenant web app where t
 - **Team page** with the seven bot roster.
 - **Database schema** (`supabase/migrations/0001_init.sql`): companies, members with flooring roles, settings, bots, inbound messages, ITBs and events, all behind row level security by company.
 
-Tests cover every parser against real invitations from the Maverick inboxes (personal details replaced with example values).
+Tests cover every parser against real invitations collected while building the parser (personal details replaced with example values).
 
 ## Run it
 

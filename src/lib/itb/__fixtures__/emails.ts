@@ -1,7 +1,7 @@
 import type { InboundEmail } from "../types";
 
 /**
- * Real invitations from the Maverick inboxes (October and November 2026), trimmed.
+ * Real invitations collected while building the parser (October and November 2026), trimmed.
  * Personal emails and phone numbers are replaced with example values.
  * HTML emails are stored as the plain text the converter produces, except one kept as HTML.
  */

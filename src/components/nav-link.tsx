@@ -1,28 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { GlassSegmented } from "./glass-segmented";
 
-export function NavLink({ href, children, badge }: { href: string; children: React.ReactNode; badge?: number }) {
+/** The island nav's page switcher, sharing the lens control with the board's filters. */
+export function MainNav({ waiting }: { waiting: number }) {
   const path = usePathname();
-  const active = href === "/" ? path === "/" : path.startsWith(href);
+  const active = path.startsWith("/bids") ? "bids" : "team";
   return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={`press flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-sm font-medium ${
-        active ? "bg-ink text-panel" : "text-ink-soft hover:bg-sunk hover:text-ink"
-      }`}
-    >
-      {children}
-      {badge ? (
-        <span
-          className={`grid h-5 min-w-5 place-items-center rounded-md px-1.5 text-[11px] font-semibold ${active ? "bg-lime text-ink" : "bg-sunk text-ink"}`}
-          aria-label={`${badge} waiting for a decision`}
-        >
-          {badge}
-        </span>
-      ) : null}
-    </Link>
+    <GlassSegmented
+      id="main"
+      label="Main"
+      active={active}
+      segments={[
+        { key: "bids", label: "Bid board", href: "/bids", count: waiting },
+        { key: "team", label: "Bot team", href: "/" },
+      ]}
+    />
   );
 }

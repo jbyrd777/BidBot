@@ -47,7 +47,7 @@ export function screenItb(itb: ParsedItb, settings: ScreenSettings, today: strin
     const pkg = [itb.packageName, ...itb.trades].filter(Boolean).join(" ");
     if (itb.flooringScope.length) goods.push(`Flooring scope: ${itb.flooringScope.join(", ")}`);
     else if (/floor|tile|resilient|carpet/i.test(pkg)) goods.push(`Invited to the ${itb.packageName ?? "flooring"} package; materials to confirm in the plans`);
-    else if (itb.kind === "batch_item") goods.push("Sent by a client for takeoff");
+    else if (itb.kind === "batch_item") goods.push("Sent in a job list; confirm scope in the plans");
     else gaps.push("Flooring scope not confirmed in the invitation");
   }
 
