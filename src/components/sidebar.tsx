@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { SquaresFour, Tray, UsersThree, CaretDown, EnvelopeSimple } from "@phosphor-icons/react";
+import { SquaresFour, Tray, UsersThree, CaretDown, EnvelopeSimple, ChatCircleDots } from "@phosphor-icons/react";
 
 type Counts = { pending: number; bid: number; no_bid: number };
 
@@ -40,6 +40,9 @@ export function Sidebar({ company, counts }: { company: string; counts: Counts }
       <nav aria-label="Main" className="mt-8 flex flex-col gap-1">
         <Item href="/" active={path === "/"} icon={<SquaresFour size={19} aria-hidden />}>
           Dashboard
+        </Item>
+        <Item href="/chat" active={path === "/chat"} icon={<ChatCircleDots size={19} aria-hidden />}>
+          Chat
         </Item>
         <Item href="/bids" active={onBids && !path.startsWith("/bids/")} icon={<Tray size={19} aria-hidden />}>
           <span className="flex-1">Bids</span>
@@ -88,6 +91,7 @@ export function MobileNav({ counts }: { counts: Counts }) {
   const path = usePathname();
   const links = [
     { href: "/", label: "Dashboard", on: path === "/" },
+    { href: "/chat", label: "Chat", on: path === "/chat" },
     { href: "/bids", label: `Bids ${counts.pending ? `(${counts.pending})` : ""}`.trim(), on: path.startsWith("/bids") },
     { href: "/team", label: "Bot team", on: path === "/team" },
   ];

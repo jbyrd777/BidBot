@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
+import { Bell, ChatCircleDots } from "@phosphor-icons/react/dist/ssr";
 import { MobileNav, Sidebar } from "@/components/sidebar";
 import { getCompany, listBids } from "@/lib/data/store";
 import "./globals.css";
@@ -42,13 +42,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <Link href="/" className="mr-1 text-[17px] font-bold tracking-[-0.02em] lg:hidden">
                   {company.name}
                 </Link>
-                <form action="/bids" role="search" className="hidden h-11 w-full max-w-[300px] items-center gap-2 rounded-[10px] bg-core px-3.5 sm:flex">
-                  <MagnifyingGlass size={17} className="shrink-0 text-ink-soft" aria-hidden />
+                <form action="/chat" className="hidden h-11 w-full max-w-[380px] items-center gap-2 rounded-[10px] bg-core px-3.5 sm:flex">
+                  <ChatCircleDots size={18} className="shrink-0 text-ink-soft" aria-hidden />
                   <label htmlFor="q" className="sr-only">
-                    Search bids
+                    Ask Bid Desk
                   </label>
-                  <input id="q" name="q" type="search" placeholder="Quick search" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-ink-soft" />
-                  <input type="hidden" name="view" value="all" />
+                  <input id="q" name="q" type="text" autoComplete="off" placeholder="Ask Bid Desk, like what is due this week" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-ink-soft" />
                 </form>
                 <div className="ml-auto flex items-center gap-2">
                   <Link
