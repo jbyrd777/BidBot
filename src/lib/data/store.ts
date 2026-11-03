@@ -30,14 +30,6 @@ export interface Company {
   weeklyCapacity: number;
 }
 
-/**
- * Demo store kept in memory, seeded from the real invitations in the fixtures.
- * The Supabase store replaces this once the database is connected; pages only use these functions.
- */
-interface State {
-  company: Company;
-  bids: Bid[];
-}
 
 const DEMO_COMPANY: Company = {
   id: "demo",
@@ -70,7 +62,7 @@ function eventFor(itb: ParsedItb): BidEvent {
 }
 
 /** Add parsed invitations to the board, folding updates and reminders into the bid they belong to. */
-export function ingest(state: State, emails: InboundEmail[]) {
+export function ingest(state: BidHolder, emails: InboundEmail[]) {
   const parsed = withTrade(state.company.trade, () => emails.flatMap(parseItbEmail))
     .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
 
@@ -102,48 +94,60 @@ export function ingest(state: State, emails: InboundEmail[]) {
   }
 }
 
-const g = globalThis as unknown as { __bidDesk?: State };
-
-function state(): State {
-  if (!g.__bidDesk) {
-    g.__bidDesk = { company: DEMO_COMPANY, bids: [] };
-    ingest(g.__bidDesk, allFixtures);
-  }
-  return g.__bidDesk;
+/** Anything that holds a company and its bids: a demo state or a signed in workspace. */
+export interface BidHolder {
+  company: Company;
+  bids: Bid[];
+  /** Changes waiting to be saved; see lib/workspace. */
+  changes?: { table: string; op: string; row: unknown }[];
 }
 
-export function getCompany(): Company {
-  return state().company;
+/** The demo company, seeded from the sample invitations. Used when no database is configured, and by tests. */
+export function demoBids(): BidHolder {
+  const s: BidHolder = { company: structuredClone(DEMO_COMPANY), bids: [] };
+  ingest(s, allFixtures);
+  return s;
+}
+
+/** Load the sample invitations into a workspace, for trials and demos. */
+export function loadSamples(ws: BidHolder) {
+  const before = new Set(ws.bids.map((b) => b.id));
+  ingest(ws, allFixtures);
+  for (const b of ws.bids) if (!before.has(b.id)) ws.changes?.push({ table: "bids", op: "upsert", row: b });
+}
+
+export function getCompany(ws: BidHolder): Company {
+  return ws.company;
 }
 
 /** The company's trade profile, for wording and scope rules. */
-export function trade() {
-  return tradeProfile(state().company.trade);
+export function trade(ws: BidHolder) {
+  return tradeProfile(ws.company.trade);
 }
 
-export function listBids(): Bid[] {
-  return [...state().bids].sort((a, b) => (a.due?.date ?? "9999").localeCompare(b.due?.date ?? "9999"));
+export function listBids(ws: BidHolder): Bid[] {
+  return [...ws.bids].sort((a, b) => (a.due?.date ?? "9999").localeCompare(b.due?.date ?? "9999"));
 }
 
-export function getBid(id: string): Bid | undefined {
-  return state().bids.find((b) => b.id === id);
+export function getBid(ws: BidHolder, id: string): Bid | undefined {
+  return ws.bids.find((b) => b.id === id);
 }
 
-export function decide(id: string, decision: Decision): Bid | undefined {
-  const bid = getBid(id);
+export function decide(ws: BidHolder, id: string, decision: Decision): Bid | undefined {
+  const bid = getBid(ws, id);
   if (!bid) return undefined;
   bid.decision = decision;
   bid.decidedAt = new Date().toISOString();
   const label = { bid: "Marked as bidding", no_bid: "Marked as not bidding", pending: "Moved back to undecided" }[decision];
   bid.events.push({ at: bid.decidedAt, kind: "decision", summary: label });
+  ws.changes?.push({ table: "bids", op: "upsert", row: bid });
   return bid;
 }
 
-/** Read the invitations again after the trade changes, so scope and screening follow the new trade. Calls already made are kept. */
-export function reread() {
-  const s = state();
-  const calls = new Map(s.bids.map((b) => [b.id, { decision: b.decision, decidedAt: b.decidedAt }]));
-  s.bids = [];
-  ingest(s, allFixtures);
-  for (const b of s.bids) Object.assign(b, calls.get(b.id) ?? {});
+/** Screen every bid again after the trade or the rules change. Calls already made are kept. */
+export function rescreen(ws: BidHolder) {
+  for (const b of ws.bids) {
+    b.screen = screenItb(b, ws.company.settings, today());
+    ws.changes?.push({ table: "bids", op: "upsert", row: b });
+  }
 }

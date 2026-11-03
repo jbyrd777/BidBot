@@ -4,6 +4,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { Segmented } from "@/components/segmented";
 import { DecisionText, GcMark, RecommendationTag, ScopeChips, formatDue } from "@/components/labels";
 import { listBids, today, type Bid, type Decision } from "@/lib/data/store";
+import { getWorkspace } from "@/lib/workspace/load";
 import { daysBetween } from "@/lib/itb/dates";
 
 export const metadata = { title: "Bids" };
@@ -41,7 +42,7 @@ export default async function BidList({ searchParams }: PageProps<"/bids">) {
   const view = VIEWS.find((v) => v.key === params.view)?.key ?? "pending";
   const q = typeof params.q === "string" ? params.q.trim().toLowerCase() : "";
   await connection();
-  const all = listBids();
+  const all = listBids(await getWorkspace());
   const t = today();
 
   const matches = (b: Bid) => !q || [b.projectName, b.gcName, b.requestedBy, b.location].some((f) => f?.toLowerCase().includes(q));

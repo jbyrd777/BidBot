@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ArrowRight, Desktop } from "@phosphor-icons/react/dist/ssr";
 import { REC_STYLE } from "@/components/labels";
 import type { BidCard } from "@/lib/agent/types";
-import { botName, getBot, team, thread, waiting } from "@/lib/team/store";
+import { botName, getBot, thread, waiting } from "@/lib/team/store";
+import type { Workspace } from "@/lib/workspace/types";
 import type { Approval, BotId, Block } from "@/lib/team/types";
 import { ApprovalButtons, AutonomySwitch, Composer, EmailDraft, ScrollPin } from "./client";
 
@@ -10,7 +11,7 @@ export function initials(name: string) {
   return name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export function BotAvatar({ id, size = 28 }: { id: BotId | "user"; size?: number }) {
+export function BotAvatar({ id, name, size = 28 }: { id: BotId | "user"; name: string; size?: number }) {
   const main = id === "chief";
   return (
     <span
@@ -18,7 +19,7 @@ export function BotAvatar({ id, size = 28 }: { id: BotId | "user"; size?: number
       className={`grid shrink-0 place-items-center rounded-full font-semibold ${main ? "card-lime !rounded-full" : id === "user" ? "bg-ink text-core" : "bg-sunk text-ink"}`}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
     >
-      {initials(botName(id))}
+      {initials(name)}
     </span>
   );
 }
@@ -44,12 +45,12 @@ function BidRow({ b }: { b: BidCard }) {
   );
 }
 
-export function ApprovalCard({ a, compact }: { a: Approval; compact?: boolean }) {
+export function ApprovalCard({ ws, a, compact }: { ws: Workspace; a: Approval; compact?: boolean }) {
   return (
     <div className="rounded-[12px] bg-sunk p-3">
       <p className="flex items-center gap-2 text-[11px] text-ink-soft">
-        <BotAvatar id={a.botId} size={18} />
-        {botName(a.botId)} {a.status === "waiting" ? "is waiting for your OK" : ""}
+        <BotAvatar id={a.botId} name={botName(ws, a.botId)} size={18} />
+        {botName(ws, a.botId)} {a.status === "waiting" ? "is waiting for your OK" : ""}
       </p>
       <p className={`mt-1.5 font-semibold ${compact ? "text-[12px]" : "text-[13px]"}`}>{a.summary}</p>
       <div className="mt-2">
@@ -65,7 +66,7 @@ export function ApprovalCard({ a, compact }: { a: Approval; compact?: boolean })
   );
 }
 
-function BlockView({ b }: { b: Block }) {
+function BlockView({ ws, b }: { ws: Workspace; b: Block }) {
   switch (b.type) {
     case "bids":
       return (
@@ -84,8 +85,8 @@ function BlockView({ b }: { b: Block }) {
         </div>
       );
     case "approval": {
-      const a = team().approvals.find((x) => x.id === b.approvalId);
-      return a ? <ApprovalCard a={a} /> : null;
+      const a = ws.team.approvals.find((x) => x.id === b.approvalId);
+      return a ? <ApprovalCard ws={ws} a={a} /> : null;
     }
     case "email":
       return <EmailDraft id={`${b.bid.id}-${b.subject.length}`} to={b.to} subject={b.subject} body={b.body} />;
@@ -148,18 +149,18 @@ const SUGGEST: Record<string, string[]> = {
   submittals: ["Submittal checklist for Immokalee FHA"],
 };
 
-export function ChatScreen({ botId, initial }: { botId: BotId; initial?: string }) {
-  const bot = getBot(botId)!;
-  const t = thread(botId);
-  const w = waiting();
-  const tasks = team().tasks.filter((x) => x.status === "open").slice(-5).reverse();
+export function ChatScreen({ ws, botId, initial }: { ws: Workspace; botId: BotId; initial?: string }) {
+  const bot = getBot(ws, botId)!;
+  const t = thread(ws, botId);
+  const w = waiting(ws);
+  const tasks = ws.team.tasks.filter((x) => x.status === "open").slice(-5).reverse();
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
       <section className="card flex min-w-0 flex-col p-4 md:p-5" style={{ minHeight: "calc(100dvh - 132px)" }}>
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline pb-4">
           <div className="flex min-w-0 items-center gap-3">
-            <BotAvatar id={botId} size={40} />
+            <BotAvatar id={botId} name={bot.name} size={40} />
             <div className="min-w-0">
               <h1 className="text-[17px] font-bold tracking-[-0.01em]">{bot.name}</h1>
               <p className="truncate text-[12px] text-ink-soft">{bot.role}</p>
@@ -186,21 +187,21 @@ export function ChatScreen({ botId, initial }: { botId: BotId; initial?: string 
               </li>
             ) : m.blocks.length === 1 && m.blocks[0].type === "handoff" && !m.text ? (
               <li key={m.id} className="flex items-center gap-2 text-[11px] text-ink-soft">
-                <BotAvatar id={m.from} size={18} />
+                <BotAvatar id={m.from} name={botName(ws, m.from)} size={18} />
                 <span>{m.blocks[0].note}</span>
                 <span className="h-px flex-1 bg-hairline" />
               </li>
             ) : (
               <li key={m.id} className="max-w-[660px]">
                 <p className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold">
-                  <BotAvatar id={m.from} size={22} />
-                  {botName(m.from)}
+                  <BotAvatar id={m.from} name={botName(ws, m.from)} size={22} />
+                  {botName(ws, m.from)}
                 </p>
                 {m.text && <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.text}</p>}
                 {m.blocks.length > 0 && (
                   <div className="mt-2.5 flex flex-col gap-2">
                     {m.blocks.map((b, i) => (
-                      <BlockView key={i} b={b} />
+                      <BlockView key={i} ws={ws} b={b} />
                     ))}
                   </div>
                 )}
@@ -224,7 +225,7 @@ export function ChatScreen({ botId, initial }: { botId: BotId; initial?: string 
           {w.length ? (
             <div className="mt-3 flex flex-col gap-2">
               {w.slice(0, 4).map((a) => (
-                <ApprovalCard key={a.id} a={a} compact />
+                <ApprovalCard key={a.id} ws={ws} a={a} compact />
               ))}
               {w.length > 4 && (
                 <Link href="/waiting" className="text-[12px] font-semibold hover:underline">

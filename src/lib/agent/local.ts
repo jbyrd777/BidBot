@@ -1,3 +1,4 @@
+import type { BidHolder } from "@/lib/data/store";
 import { trade } from "@/lib/data/store";
 import type { Bid } from "@/lib/data/store";
 import { card, draftEmail, findBid, findGcBids, searchBids, weekSummary, type EmailPurpose } from "./ops";
@@ -18,16 +19,16 @@ function emailPurpose(s: string): EmailPurpose {
   return "followup";
 }
 
-export function localReply(message: string): ChatReply {
+export function localReply(ws: BidHolder, message: string): ChatReply {
   const s = message.toLowerCase().replace(/[’']/g, "'");
-  const bid = findBid(message);
+  const bid = findBid(ws, message);
 
   // Email drafts: "draft an email to Pinnacle asking for plans"
   if (has(s, "email", "draft", "write", "follow up", "follow-up", "reach out", "message")) {
-    const target = bid ?? findGcBids(s)[0];
+    const target = bid ?? findGcBids(ws, s)[0];
     if (!target) return { from: "GC Follow Up", text: "Which bid is the email for? Name the project or the GC and I will draft it.", blocks: [] };
     const purpose = emailPurpose(s);
-    const d = draftEmail(target, purpose);
+    const d = draftEmail(ws, target, purpose);
     const what = { plans: "asking for plans and specs", intent: "confirming you plan to bid", decline: "passing politely", followup: "following up" }[purpose];
     return {
       from: "GC Follow Up",
@@ -42,10 +43,10 @@ export function localReply(message: string): ChatReply {
   if (wantsPass || wantsBid) {
     const decision = wantsPass ? "no_bid" : "bid";
     let targets: Bid[] = [];
-    if (has(s, "outside", "out of area", "washington", " wa ", "service area")) targets = searchBids({ outsideServiceArea: true, decision: "pending" });
-    else if (has(s, "likely pass", "the passes")) targets = searchBids({ recommendation: "no_bid", decision: "pending" });
+    if (has(s, "outside", "out of area", "washington", " wa ", "service area")) targets = searchBids(ws, { outsideServiceArea: true, decision: "pending" });
+    else if (has(s, "likely pass", "the passes")) targets = searchBids(ws, { recommendation: "no_bid", decision: "pending" });
     else if (bid) targets = [bid];
-    else targets = findGcBids(s).filter((b) => b.decision === "pending");
+    else targets = findGcBids(ws, s).filter((b) => b.decision === "pending");
     if (!targets.length) return { from: "Bid Desk", text: "I could not tell which bid you mean. Name the project, the GC, or say something like \"pass on the ones outside our area\".", blocks: [] };
     return {
       from: "Bid Desk",
@@ -55,10 +56,10 @@ export function localReply(message: string): ChatReply {
   }
 
   // Lists
-  const { all, pending, week, urgent } = weekSummary();
+  const { all, pending, week, urgent } = weekSummary(ws);
   if (has(s, "today", "tomorrow", "this week", "due", "deadline", "coming up", "next")) {
     const days = has(s, "today") ? 0 : has(s, "tomorrow") ? 1 : has(s, "two weeks", "14") ? 14 : 6;
-    const list = searchBids({ dueWithinDays: days }).filter((b) => b.decision !== "no_bid");
+    const list = searchBids(ws, { dueWithinDays: days }).filter((b) => b.decision !== "no_bid");
     const span = days === 0 ? "today" : days === 1 ? "by tomorrow" : days === 14 ? "in the next two weeks" : "this week";
     return {
       from: "Bid Desk",
@@ -67,18 +68,18 @@ export function localReply(message: string): ChatReply {
     };
   }
   if (has(s, "outside", "service area", "out of area", "washington")) {
-    const list = searchBids({ outsideServiceArea: true });
+    const list = searchBids(ws, { outsideServiceArea: true });
     return { from: "Bid Desk", text: list.length ? `${plural(list.length, "invitation")} outside your service area. Say "pass on the ones outside our area" to clear them.` : "Every invitation with a location is inside your service area.", blocks: list.length ? [{ type: "bids", title: "Outside the service area", bids: list.map(card) }] : [] };
   }
   if (has(s, "waiting", "undecided", "pending", "need a call", "decide")) {
     return { from: "Bid Desk", text: pending.length ? `${plural(pending.length, "bid")} waiting on a call, soonest first.` : "Every bid has a call.", blocks: pending.length ? [{ type: "bids", title: "Waiting on a call", bids: pending.map(card) }] : [] };
   }
   if (has(s, "needs a look", "need a look", "review", "unclear", "missing")) {
-    const list = searchBids({ recommendation: "review", decision: "pending" });
+    const list = searchBids(ws, { recommendation: "review", decision: "pending" });
     return { from: "Bid Desk", text: list.length ? `${plural(list.length, "bid")} need a look before a call. The first reason is on each row.` : "Nothing is flagged for a closer look.", blocks: list.length ? [{ type: "bids", title: "Need a look", bids: list.map(card) }] : [] };
   }
   if (has(s, "bidding", "we bid", "yes list")) {
-    const list = searchBids({ decision: "bid" });
+    const list = searchBids(ws, { decision: "bid" });
     return { from: "Bid Desk", text: list.length ? `You are bidding ${plural(list.length, "job")}.` : "No bids are marked as bidding yet.", blocks: list.length ? [{ type: "bids", title: "Bidding", bids: list.map(card) }] : [] };
   }
 
@@ -88,7 +89,7 @@ export function localReply(message: string): ChatReply {
     const facts = [
       `${bid.projectName}${c.gc ? ` from ${c.gc}` : ""}${bid.location ? `, ${bid.location}` : ""}.`,
       c.due ? `Due ${c.dueWhen.toLowerCase()} (${c.due}).` : "No due date in the invitation.",
-      bid.scope.length ? `Scope named: ${bid.scope.join(", ")}.` : `The invitation does not name the ${trade().noun} scope.`,
+      bid.scope.length ? `Scope named: ${bid.scope.join(", ")}.` : `The invitation does not name the ${trade(ws).noun} scope.`,
       `First read: ${bid.screen.reasons.join("; ")}.`,
     ];
     return { from: "Bid Desk", text: facts.join(" "), blocks: [{ type: "bids", title: "This bid", bids: [c] }] };

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AccessChip } from "@/components/team/access-chip";
 import { APP_GROUPS } from "@/lib/providers/apps";
 import { providerOn } from "@/lib/providers";
-import { team } from "@/lib/team/store";
+import { getWorkspace } from "@/lib/workspace/load";
 
 export const metadata = { title: "Vault" };
 export const instant = false;
@@ -11,7 +11,7 @@ export const instant = false;
 export default async function VaultPage() {
   await connection();
   const ready = providerOn("apps");
-  const bots = team().bots;
+  const bots = (await getWorkspace()).team.bots;
   return (
     <div className="flex flex-col gap-4">
       <section className="card p-5 md:p-6">

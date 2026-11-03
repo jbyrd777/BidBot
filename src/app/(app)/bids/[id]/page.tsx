@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowSquareOut, Check, X, ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr";
 import { DecisionText, GcMark, RecommendationTag, ScopeChips, formatDue } from "@/components/labels";
 import { getBid, today, trade } from "@/lib/data/store";
+import { getWorkspace } from "@/lib/workspace/load";
 import { setDecision } from "@/app/actions";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -20,7 +21,8 @@ export const instant = false;
 export default async function BidPage({ params }: PageProps<"/bids/[id]">) {
   const { id } = await params;
   await connection();
-  const bid = getBid(id);
+  const ws = await getWorkspace();
+  const bid = getBid(ws, id);
   if (!bid) notFound();
   const t = today();
   const due = formatDue(bid.due, t);
@@ -60,7 +62,7 @@ export default async function BidPage({ params }: PageProps<"/bids/[id]">) {
             </dl>
 
             <div className="mt-7">
-              <h2 className="text-[14px] font-semibold">{trade().name} scope</h2>
+              <h2 className="text-[14px] font-semibold">{trade(ws).name} scope</h2>
               <div className="mt-2">
                 <ScopeChips scope={bid.scope} />
               </div>

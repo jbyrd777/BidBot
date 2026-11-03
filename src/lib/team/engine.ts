@@ -1,3 +1,4 @@
+import type { TeamHolder } from "./store";
 import { localReply } from "@/lib/agent/local";
 import { findBid, findGcBids } from "@/lib/agent/ops";
 import { listBids } from "@/lib/data/store";
@@ -22,8 +23,8 @@ export function route(text: string): BotId {
   return "bid_desk";
 }
 
-function targetBid(text: string): Bid | undefined {
-  return findBid(text) ?? findGcBids(text.toLowerCase())[0];
+function targetBid(ws: TeamHolder, text: string): Bid | undefined {
+  return findBid(ws, text) ?? findGcBids(ws, text.toLowerCase())[0];
 }
 
 function ask(what: string): SkillResult {
@@ -31,36 +32,36 @@ function ask(what: string): SkillResult {
 }
 
 /** Built in handling for each bot, used until a language model is connected. */
-function local(bot: BotId, text: string, threadBot: BotId): SkillResult {
+function local(ws: TeamHolder, bot: BotId, text: string, threadBot: BotId): SkillResult {
   const s = text.toLowerCase();
-  const bid = targetBid(text);
+  const bid = targetBid(ws, text);
   switch (bot) {
     case "scope_analyst":
-      return bid ? scopeSnapshot(bid) : ask("write the scope snapshot");
+      return bid ? scopeSnapshot(ws, bid) : ask("write the scope snapshot");
     case "takeoff_coordinator":
-      return bid ? requestTakeoff(bid, threadBot) : ask("queue the takeoff");
+      return bid ? requestTakeoff(ws, bid, threadBot) : ask("queue the takeoff");
     case "vendor_rfq":
-      return bid ? draftRfq(bid) : ask("draft the RFQ");
+      return bid ? draftRfq(ws, bid) : ask("draft the RFQ");
     case "proposal_builder":
-      return bid ? draftProposal(bid) : ask("outline the proposal");
+      return bid ? draftProposal(ws, bid) : ask("outline the proposal");
     case "submittals":
-      return bid ? submittalChecklist(bid) : ask("build the checklist");
+      return bid ? submittalChecklist(ws, bid) : ask("build the checklist");
     case "gc_follow_up": {
       if (!bid) return ask("draft it");
       const purpose = has(s, "plan", "spec", "drawing") ? "plans" : has(s, "decline", "pass", "regret") ? "decline" : has(s, "intent", "we're bidding", "we are bidding") ? "intent" : "followup";
-      return gcEmail(bid, purpose);
+      return gcEmail(ws, bid, purpose);
     }
     case "chief":
-      return chief(text, threadBot);
+      return chief(ws, text, threadBot);
     default: {
-      const r = localReply(text);
+      const r = localReply(ws, text);
       const blocks: Block[] = r.blocks.map((b) => {
         if (b.type !== "confirm") return b;
-        const full = listBids().find((x) => x.id === b.bid.id)!;
-        return decisionCard(full, b.decision, threadBot);
+        const full = listBids(ws).find((x) => x.id === b.bid.id)!;
+        return decisionCard(ws, full, b.decision, threadBot);
       });
       const text2 = r.blocks.some((b) => b.type === "confirm")
-        ? getBot("bid_desk")?.autonomy === "auto"
+        ? getBot(ws, "bid_desk")?.autonomy === "auto"
           ? "Done. I updated the board; each change is listed below."
           : `${blocks.length === 1 ? "This call is" : `These ${blocks.length} calls are`} waiting for your OK. Passing does not email the GC; ask for a draft if you want one.`
         : r.text;
@@ -69,26 +70,26 @@ function local(bot: BotId, text: string, threadBot: BotId): SkillResult {
   }
 }
 
-function chief(text: string, threadBot: BotId): SkillResult {
+function chief(ws: TeamHolder, text: string, threadBot: BotId): SkillResult {
   const s = text.toLowerCase();
   const m = text.match(/remember(?: that)?\s+(.+)/i);
   if (m) {
-    remember(m[1].replace(/[.]$/, ""), "chief");
+    remember(ws, m[1].replace(/[.]$/, ""), "chief");
     return { text: "Got it. Every bot on the team will use that.", blocks: [] };
   }
   if (has(s, "what do you know", "what do you remember")) {
-    const facts = team().facts;
+    const facts = team(ws).facts;
     return { text: facts.length ? facts.map((f) => f.text).join("\n") : "Nothing saved yet. Tell me something to remember and every bot will use it.", blocks: [] };
   }
   const r = text.match(/(?:remind me to|add a task to|task:?|todo:?|to do:?)\s+(.+)/i);
   if (r) {
-    return { text: "I can add that to your tasks.", blocks: [change("chief", threadBot, "create_task", `Add a task for you: ${r[1]}`, { title: r[1], owner: team().you.name })] };
+    return { text: "I can add that to your tasks.", blocks: [change(ws, "chief", threadBot, "create_task", `Add a task for you: ${r[1]}`, { title: r[1], owner: team(ws).you.name })] };
   }
   if (has(s, "waiting", "approval")) {
-    const w = waiting();
+    const w = waiting(ws);
     return { text: w.length ? `${w.length} ${w.length === 1 ? "thing is" : "things are"} waiting for your OK:` : "Nothing is waiting for your OK.", blocks: w.map((a) => ({ type: "approval" as const, approvalId: a.id })) };
   }
-  const roster = team().bots.filter((b) => b.id !== "chief").map((b) => b.name).join(", ");
+  const roster = team(ws).bots.filter((b) => b.id !== "chief").map((b) => b.name).join(", ");
   return {
     text: `I run the team: ${roster}. Ask me anything about your bids, scope, takeoffs, vendor pricing, proposals, GC follow up or submittals and I will hand it to the right bot. I can also remember things for the whole team and keep your task list. Anything that changes data or goes out waits for your OK.`,
     blocks: [],
@@ -99,24 +100,24 @@ function chief(text: string, threadBot: BotId): SkillResult {
  * One turn of conversation. A message to the main bot is routed to the right specialist, who answers
  * in the same thread; a message in a specialist's own thread goes straight to that bot.
  */
-export async function respond(threadBot: BotId, text: string) {
-  const t = thread(threadBot);
-  post(t, { from: "user", text, blocks: [] });
+export async function respond(ws: TeamHolder, threadBot: BotId, text: string) {
+  const t = thread(ws, threadBot);
+  post(ws, t, { from: "user", text, blocks: [] });
 
   if (modelConfigured()) {
     try {
-      const r = await modelTurn(threadBot, t);
-      if (r.handoff && threadBot === "chief" && r.from !== "chief") post(t, { from: "chief", text: "", blocks: [{ type: "handoff", to: r.from, note: `Passing this to ${botName(r.from)}` }] });
-      post(t, { from: r.from, text: r.text, blocks: r.blocks });
+      const r = await modelTurn(ws, threadBot, t);
+      if (r.handoff && threadBot === "chief" && r.from !== "chief") post(ws, t, { from: "chief", text: "", blocks: [{ type: "handoff", to: r.from, note: `Passing this to ${botName(ws, r.from)}` }] });
+      post(ws, t, { from: r.from, text: r.text, blocks: r.blocks });
       return t;
     } catch (e) {
-      post(t, { from: threadBot, text: "", blocks: [{ type: "notice", tone: "warn", text: `The language model did not answer (${(e as Error).message}). I answered with the built in skills instead.`, href: "/settings", cta: "Check settings" }] });
+      post(ws, t, { from: threadBot, text: "", blocks: [{ type: "notice", tone: "warn", text: `The language model did not answer (${(e as Error).message}). I answered with the built in skills instead.`, href: "/settings", cta: "Check settings" }] });
     }
   }
 
   const target = threadBot === "chief" ? route(text) : threadBot;
-  if (threadBot === "chief" && target !== "chief") post(t, { from: "chief", text: "", blocks: [{ type: "handoff", to: target, note: `Passing this to ${botName(target)}` }] });
-  const r = local(target, text, threadBot);
-  post(t, { from: target, text: r.text, blocks: r.blocks });
+  if (threadBot === "chief" && target !== "chief") post(ws, t, { from: "chief", text: "", blocks: [{ type: "handoff", to: target, note: `Passing this to ${botName(ws, target)}` }] });
+  const r = local(ws, target, text, threadBot);
+  post(ws, t, { from: target, text: r.text, blocks: r.blocks });
   return t;
 }

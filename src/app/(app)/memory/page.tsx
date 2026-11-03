@@ -1,13 +1,15 @@
 import { connection } from "next/server";
 import { addFact, removeFact } from "@/app/team-actions";
-import { botName, team } from "@/lib/team/store";
+import { botName } from "@/lib/team/store";
+import { getWorkspace } from "@/lib/workspace/load";
 
 export const metadata = { title: "Memory" };
 export const instant = false;
 
 export default async function MemoryPage() {
   await connection();
-  const s = team();
+  const ws = await getWorkspace();
+  const s = ws.team;
   return (
     <section className="card max-w-3xl p-5 md:p-6">
       <h1 className="text-[22px] font-bold tracking-[-0.02em]">Memory</h1>
@@ -33,7 +35,7 @@ export default async function MemoryPage() {
             <li key={f.id} className="flex items-center gap-3 py-2.5">
               <span className="min-w-0 flex-1 text-[13px]">{f.text}</span>
               <span className="shrink-0 text-[11px] text-ink-soft">
-                {botName(f.botId)}, {f.at.slice(5, 10).replace("-", ".")}
+                {botName(ws, f.botId)}, {f.at.slice(5, 10).replace("-", ".")}
               </span>
               <form action={removeFact}>
                 <input type="hidden" name="id" value={f.id} />

@@ -7,6 +7,7 @@ import { Gauge } from "@/components/gauge";
 import { Segmented } from "@/components/segmented";
 import { GcMark, REC_STYLE, formatDue } from "@/components/labels";
 import { getCompany, listBids, today, trade, type Bid } from "@/lib/data/store";
+import { getWorkspace } from "@/lib/workspace/load";
 import { daysBetween } from "@/lib/itb/dates";
 import {
   PLATFORM_LABEL,
@@ -86,8 +87,9 @@ function QuickAction({ label, icon, href, form }: { label: string; icon: React.R
 export default async function Dashboard({ searchParams }: PageProps<"/dashboard">) {
   const params = await searchParams;
   await connection();
-  const company = getCompany();
-  const all = listBids();
+  const ws = await getWorkspace();
+  const company = getCompany(ws);
+  const all = listBids(ws);
   const t = today();
 
   const span = params.range === "14" ? 14 : 7;
@@ -250,7 +252,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
         {/* Row 3: scope mix, service area fit, coming up */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <section className="card p-5">
-            <CardHead title="Scope mix" sub={`${trade().name} scope named in the invitations`} />
+            <CardHead title="Scope mix" sub={`${trade(ws).name} scope named in the invitations`} />
             <p className="mt-4 text-[30px] font-bold leading-none tracking-[-0.03em]">
               {scope.named}
               <span className="ml-1.5 text-[13px] font-medium tracking-normal text-ink-soft">of {all.length} name their scope</span>
