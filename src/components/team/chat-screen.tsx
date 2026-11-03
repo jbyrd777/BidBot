@@ -5,7 +5,7 @@ import type { BidCard } from "@/lib/agent/types";
 import { botName, getBot, thread, waiting } from "@/lib/team/store";
 import type { Workspace } from "@/lib/workspace/types";
 import type { Approval, BotId, Block } from "@/lib/team/types";
-import { ApprovalButtons, AutonomySwitch, Composer, EmailDraft, ScrollPin } from "./client";
+import { ApprovalButtons, AutonomySwitch, ChoiceButtons, Composer, EmailDraft, ScrollPin } from "./client";
 
 export function initials(name: string) {
   return name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -131,6 +131,8 @@ function BlockView({ ws, b }: { ws: Workspace; b: Block }) {
           )}
         </p>
       );
+    case "choices":
+      return <ChoiceButtons text={b.text} options={b.options} />;
     case "confirm":
       return null;
     case "handoff":

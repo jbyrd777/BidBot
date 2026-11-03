@@ -26,6 +26,15 @@ export async function sendMessage(botId: string, text: string) {
   revalidatePath("/", "layout");
 }
 
+/** Send an earlier request to the bot the person picked, without posting it again. */
+export async function routeTo(text: string, to: string) {
+  const ws = await getWorkspace();
+  if (!getBot(ws, to)) return;
+  await respond(ws, "chief", text, { to: to as BotId, repost: false });
+  await commit(ws);
+  revalidatePath("/", "layout");
+}
+
 export async function answerApproval(id: string, ok: boolean) {
   const ws = await getWorkspace();
   if (!CAN_APPROVE.includes(ws.me.role)) throw denied("approve bot actions");

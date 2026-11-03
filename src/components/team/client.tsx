@@ -2,7 +2,7 @@
 
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { ArrowUp, Check, CopySimple, EnvelopeSimple, X } from "@phosphor-icons/react";
-import { answerApproval, saveAutonomy, sendMessage } from "@/app/team-actions";
+import { answerApproval, routeTo, saveAutonomy, sendMessage } from "@/app/team-actions";
 
 /** Keeps the newest message in view as the thread grows. */
 export function ScrollPin({ count }: { count: number }) {
@@ -171,6 +171,31 @@ export function EmailDraft({ id, to, subject: s0, body: b0 }: { id: string; to?:
           <CopySimple size={14} aria-hidden /> {copied ? "Copied" : "Copy"}
         </button>
       </div>
+    </div>
+  );
+}
+
+export function ChoiceButtons({ text, options }: { text: string; options: { to: string; label: string }[] }) {
+  const [pending, start] = useTransition();
+  const [picked, setPicked] = useState<string | null>(null);
+  if (picked) return <p className="text-[12px] text-ink-soft">Sent to {picked}.</p>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => (
+        <button
+          key={o.to}
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              await routeTo(text, o.to);
+              setPicked(o.label);
+            })
+          }
+          className="press h-8 cursor-pointer rounded-[8px] bg-sunk px-3 text-[12px] font-semibold hover:bg-ghost disabled:opacity-50"
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

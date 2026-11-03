@@ -53,6 +53,14 @@ describe("team engine", () => {
     expect(store.execute(ws, { kind: "send_email" } as never)).toMatch(/connected mailbox/);
   });
 
+  it("asks which bot when two fit, then sends the request where the person picks", async () => {
+    const t = await engine.respond(ws, "chief", "follow up on the RFQ");
+    const ask = t.messages.at(-1)!;
+    expect(ask.blocks[0]?.type).toBe("choices");
+    await engine.respond(ws, "chief", "follow up on the RFQ", { to: "vendor_rfq", repost: false });
+    expect(t.messages.at(-1)?.from).toBe("vendor_rfq");
+  });
+
   it("remembers facts for the whole team", async () => {
     await engine.respond(ws, "chief", "Remember that we never bid Washington work");
     expect(store.team(ws).facts.at(-1)?.text).toBe("we never bid Washington work");

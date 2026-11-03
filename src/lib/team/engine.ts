@@ -7,21 +7,11 @@ import { decisionCard, draftProposal, draftRfq, gcEmail, requestTakeoff, scopeSn
 import { botName, getBot, post, remember, team, thread, waiting } from "./store";
 import type { BotId, Block } from "./types";
 import { modelConfigured, modelTurn } from "./model";
+import { routeDetailed } from "./router";
 
 const has = (s: string, ...w: string[]) => w.some((x) => s.includes(x));
 
-/** Which bot should take a request. The main bot keeps anything that is about the team itself. */
-export function route(text: string): BotId {
-  const s = ` ${text.toLowerCase()} `;
-  if (has(s, "remember", "what do you know", "forget ", "remind me", "to do", "todo", "task", "waiting for", "approval", "what can you", "who are you", "help")) return "chief";
-  if (has(s, "rfq", "vendor", "distributor", "supplier", "lead time", "material price", "pricing from")) return "vendor_rfq";
-  if (has(s, "takeoff", "take off", "quantities", "measure")) return "takeoff_coordinator";
-  if (has(s, "proposal", "inclusion", "exclusion", "alternate")) return "proposal_builder";
-  if (has(s, "submittal", "data sheet", "warranty", "samples")) return "submittals";
-  if (has(s, "scope", " spec", "finish schedule", "plans for", "go or no go")) return "scope_analyst";
-  if (has(s, "email", "draft", "follow up", "follow-up", "reach out", "write to", "call the gc", "text the gc")) return "gc_follow_up";
-  return "bid_desk";
-}
+export { route } from "./router";
 
 function targetBid(ws: TeamHolder, text: string): Bid | undefined {
   return findBid(ws, text) ?? findGcBids(ws, text.toLowerCase())[0];
@@ -100,11 +90,11 @@ function chief(ws: TeamHolder, text: string, threadBot: BotId): SkillResult {
  * One turn of conversation. A message to the main bot is routed to the right specialist, who answers
  * in the same thread; a message in a specialist's own thread goes straight to that bot.
  */
-export async function respond(ws: TeamHolder, threadBot: BotId, text: string) {
+export async function respond(ws: TeamHolder, threadBot: BotId, text: string, opts: { to?: BotId; repost?: boolean } = {}) {
   const t = thread(ws, threadBot);
-  post(ws, t, { from: "user", text, blocks: [] });
+  if (opts.repost !== false) post(ws, t, { from: "user", text, blocks: [] });
 
-  if (modelConfigured()) {
+  if (modelConfigured() && !opts.to) {
     try {
       const r = await modelTurn(ws, threadBot, t);
       if (r.handoff && threadBot === "chief" && r.from !== "chief") post(ws, t, { from: "chief", text: "", blocks: [{ type: "handoff", to: r.from, note: `Passing this to ${botName(ws, r.from)}` }] });
@@ -115,7 +105,22 @@ export async function respond(ws: TeamHolder, threadBot: BotId, text: string) {
     }
   }
 
-  const target = threadBot === "chief" ? route(text) : threadBot;
+  let target: BotId = threadBot;
+  if (threadBot === "chief") {
+    if (opts.to && getBot(ws, opts.to)) target = opts.to;
+    else {
+      const r = routeDetailed(text);
+      if (r.tie) {
+        post(ws, t, {
+          from: "chief",
+          text: `This could go to ${botName(ws, r.bot)} or ${botName(ws, r.tie)}. Which one should take it?`,
+          blocks: [{ type: "choices", text, options: [r.bot, r.tie].map((to) => ({ to, label: botName(ws, to) })) }],
+        });
+        return t;
+      }
+      target = r.bot;
+    }
+  }
   if (threadBot === "chief" && target !== "chief") post(ws, t, { from: "chief", text: "", blocks: [{ type: "handoff", to: target, note: `Passing this to ${botName(ws, target)}` }] });
   const r = local(ws, target, text, threadBot);
   post(ws, t, { from: target, text: r.text, blocks: r.blocks });

@@ -55,7 +55,9 @@ export type Block =
   | { type: "approval"; approvalId: string }
   | { type: "doc"; title: string; sections: { heading: string; lines: string[] }[] }
   | { type: "checklist"; title: string; items: string[] }
-  | { type: "notice"; tone: "info" | "warn"; text: string; href?: string; cta?: string };
+  | { type: "notice"; tone: "info" | "warn"; text: string; href?: string; cta?: string }
+  /** The main bot asking which bot should take a request; picking one sends the original request there. */
+  | { type: "choices"; text: string; options: { to: BotId; label: string }[] };
 
 export interface Message {
   id: string;
