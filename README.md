@@ -1,4 +1,8 @@
-# Bid Desk
+# BidBot
+
+See CLAUDE.md for the current state of the product, how it is built and what is next. The notes below describe the original bid intake piece.
+
+## Bid Desk
 
 The first working piece of the flooring bot team: a multi tenant web app where the Bid Desk bot reads invitations to bid, pulls out the facts, screens each one against the company's rules, and puts it on a bid board for a person to make the bid or no bid call.
 
