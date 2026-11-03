@@ -1,11 +1,10 @@
-import type { TeamHolder } from "./store";
 import { formatDue } from "@/components/labels";
-import { addDays } from "@/lib/dashboard";
-import type { Bid } from "@/lib/data/store";
-import { today, trade } from "@/lib/data/store";
-import { card, draftEmail, type EmailPurpose } from "@/lib/agent/ops";
-import { addApproval, execute, getBot, thread } from "./store";
-import type { BotId, Block } from "./types";
+import type { SkillResult } from "@/lib/team/pack";
+import { change } from "@/lib/team/store";
+import type { BotId, Block } from "@/lib/team/types";
+import { card, draftEmail, type EmailPurpose } from "./agent/ops";
+import { addDays } from "./dashboard";
+import { today, trade, type Bid, type ConstructionWs } from "./store";
 
 /**
  * What each specialist can do for one bid. Both responders call these, so a bot behaves the same
@@ -13,23 +12,7 @@ import type { BotId, Block } from "./types";
  * unless the bot is set to run on its own.
  */
 
-export interface SkillResult {
-  text: string;
-  blocks: Block[];
-}
-
-/** A change a bot wants to make: queued for an OK, or carried out now when the bot runs on its own. */
-export function change(ws: TeamHolder, botId: BotId, threadBot: BotId, kind: "decide" | "create_task", summary: string, payload: Record<string, string>): Block {
-  const bot = getBot(ws, botId);
-  const ap = addApproval(ws, { botId, threadId: thread(ws, threadBot).id, kind, summary, payload });
-  if (bot?.autonomy === "auto") {
-    ap.status = "done";
-    ap.result = execute(ws, ap);
-  }
-  return { type: "approval", approvalId: ap.id };
-}
-
-export function scopeSnapshot(ws: TeamHolder, b: Bid): SkillResult {
+export function scopeSnapshot(ws: ConstructionWs, b: Bid): SkillResult {
   const due = formatDue(b.due, today());
   const gaps = b.screen.reasons.filter((r) => /not|no |under|outside|missing/i.test(r));
   return {
@@ -57,15 +40,15 @@ export function scopeSnapshot(ws: TeamHolder, b: Bid): SkillResult {
   };
 }
 
-export function requestTakeoff(ws: TeamHolder, b: Bid, threadBot: BotId): SkillResult {
+export function requestTakeoff(ws: ConstructionWs, b: Bid, threadBot: BotId): SkillResult {
   const due = b.due ? addDays(b.due.date, -2) : undefined;
   return {
     text: `I can put the takeoff for ${b.projectName} in the estimating queue${due ? `, due ${formatDue({ date: due, raw: "" }, today()).date}, two days ahead of the bid` : ""}.`,
-    blocks: [change(ws, "takeoff_coordinator", threadBot, "create_task", `Add a takeoff for ${b.projectName} to the estimating queue`, { title: `Takeoff: ${b.projectName}`, owner: "Estimating", bidId: b.id, due: due ?? "" })],
+    blocks: [change(ws, "takeoff_coordinator", threadBot, "create_task", `Add a takeoff for ${b.projectName} to the estimating queue`, { title: `Takeoff: ${b.projectName}`, owner: "Estimating", ref: b.id, due: due ?? "" })],
   };
 }
 
-export function draftRfq(ws: TeamHolder, b: Bid): SkillResult {
+export function draftRfq(ws: ConstructionWs, b: Bid): SkillResult {
   const lines = b.scope.length ? b.scope.map((s) => `${s}: quantity to follow from the takeoff`) : ["Scope items: to follow once the plans are read"];
   const body = [
     "Hello,",
@@ -83,7 +66,7 @@ export function draftRfq(ws: TeamHolder, b: Bid): SkillResult {
   };
 }
 
-export function draftProposal(ws: TeamHolder, b: Bid): SkillResult {
+export function draftProposal(ws: ConstructionWs, b: Bid): SkillResult {
   return {
     text: `Here is a proposal outline for ${b.projectName}. The inclusions and exclusions are a starter list; edit them to your standard language. Sales sets the price.`,
     blocks: [
@@ -102,14 +85,14 @@ export function draftProposal(ws: TeamHolder, b: Bid): SkillResult {
   };
 }
 
-export function submittalChecklist(ws: TeamHolder, b: Bid): SkillResult {
+export function submittalChecklist(ws: ConstructionWs, b: Bid): SkillResult {
   const types = b.scope.length ? b.scope : ["Each product"];
   const items = types.flatMap((t) => [`${t}: product data sheet`, `${t}: installation instructions`, `${t}: warranty`, `${t}: samples for color selection`]);
   items.push(...trade(ws).submittalExtras);
   return { text: `Submittal checklist for ${b.projectName}. I will fill it in once the products are selected.`, blocks: [{ type: "checklist", title: `Submittals: ${b.projectName}`, items }] };
 }
 
-export function gcEmail(ws: TeamHolder, b: Bid, purpose: EmailPurpose): SkillResult {
+export function gcEmail(ws: ConstructionWs, b: Bid, purpose: EmailPurpose): SkillResult {
   const d = draftEmail(ws, b, purpose);
   return {
     text: `Here is a draft to ${b.contact?.name ?? b.gcName ?? "the GC"}. Edit it, then send it from your mail. Connect Gmail or Outlook in the Vault and I can send it after your OK.`,
@@ -117,6 +100,6 @@ export function gcEmail(ws: TeamHolder, b: Bid, purpose: EmailPurpose): SkillRes
   };
 }
 
-export function decisionCard(ws: TeamHolder, b: Bid, decision: "bid" | "no_bid", threadBot: BotId): Block {
+export function decisionCard(ws: ConstructionWs, b: Bid, decision: "bid" | "no_bid", threadBot: BotId): Block {
   return change(ws, "bid_desk", threadBot, "decide", `Mark ${b.projectName} as ${decision === "bid" ? "bidding" : "not bidding"}`, { bidId: b.id, decision });
 }

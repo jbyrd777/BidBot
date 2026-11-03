@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { DayStack } from "@/lib/dashboard";
-import { shortDate, weekday } from "@/lib/dashboard";
+import type { DayStack } from "@/packs/construction/dashboard";
+import { shortDate, weekday } from "@/packs/construction/dashboard";
 import { REC_STYLE } from "./labels";
 
 const H = 220;

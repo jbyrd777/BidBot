@@ -6,11 +6,11 @@ Read this before changing anything. It carries the decisions made while building
 
 ## What BidBot is
 
-A team of bots that runs a commercial subcontractor's bid cycle, sold as a subscription (owned by Maverick Takeoff Solutions). People chat with a main bot ("Foreman" by default, renamable per company). It hands each request to the specialist bot that owns it and reports back in the same thread. Any trade: flooring, painting, drywall, electrical, plumbing, HVAC, fire protection, roofing, glazing, concrete (`src/lib/trades.ts`).
+A team of bots that runs a commercial subcontractor's bid cycle, sold as a subscription (owned by Maverick Takeoff Solutions). People chat with a main bot ("Foreman" by default, renamable per company). It hands each request to the specialist bot that owns it and reports back in the same thread. Any trade: flooring, painting, drywall, electrical, plumbing, HVAC, fire protection, roofing, glazing, concrete (`src/packs/construction/trades.ts`).
 
 It follows the feature set of Orgo's Bops (github.com/OrgoAI/bops), rebuilt from scratch for subcontractors. **Never copy Bops code, wording, names or mascots.** Its license (FSL) forbids using its code in a competing product. Match features, write our own code.
 
-Bot team (`src/lib/bots/roster.ts`, seeded per workspace by `create_workspace()` in SQL): Foreman (main), Bid Desk, Scope Analyst, Takeoff Coordinator, Vendor RFQ, Proposal Builder, GC Follow Up, Submittals.
+Bot team (`src/packs/construction/roster.ts`, passed to `create_workspace()` in SQL when a workspace is made): Foreman (main), Bid Desk, Scope Analyst, Takeoff Coordinator, Vendor RFQ, Proposal Builder, GC Follow Up, Submittals.
 
 ## Rules that never bend
 
@@ -21,18 +21,21 @@ Bot team (`src/lib/bots/roster.ts`, seeded per workspace by `create_workspace()`
 
 ## How it is built
 
+- Local tooling: Node 22 lives in `~/.local/node/bin` (put it on PATH). Install with `npm ci --legacy-peer-deps` (vitest 5 and `@types/node` 20 disagree on a peer). `.claude/launch.json` has a `demo` server on port 3100 that skips `.env.local` (NODE_ENV=test), so it runs the local demo workspace with no database or model.
 - Next.js 16 App Router (read `node_modules/next/dist/docs` first; `proxy.ts` replaces middleware), React 19, Tailwind v4, TypeScript, vitest.
 - Pages that read request data use `export const instant = false` plus `await connection()`.
 - `src/app/(app)/` is the signed in app shell; `login`, `onboarding`, `invite/[token]`, `auth/callback` sit outside it.
 - **Workspace per request:** `getWorkspace()` (`src/lib/workspace/load.ts`) loads the signed in person's company. Every store function takes `ws` explicitly. Mutations record `ws.changes`; `commit(ws)` (`src/lib/workspace/commit.ts`) saves them. Without Supabase env vars it runs one local demo workspace (`src/lib/workspace/demo.ts`).
-- **Engine:** `src/lib/team/engine.ts` `respond(ws, threadBot, text)`. Routing without a model: scored signals in `src/lib/team/router.ts`; on a near tie the main bot asks with choice buttons. With a model: `src/lib/team/model.ts`, any OpenAI compatible API, tools owned by bots (the tool used decides which bot answers).
-- **Skills** (`src/lib/team/skills.ts`) are shared by both paths: scope snapshot, takeoff request, RFQ draft, proposal outline, submittal checklist, GC emails, bid or pass cards.
-- **ITB parser** (`src/lib/itb`): BuildingConnected, ConstructConnect, Procore, direct GC email, client job lists. Scope is read through the company's trade (`withTrade`).
+- **Core and packs.** The core (`src/lib/team`, `src/lib/workspace`) runs the bot team, chat, approvals, tasks and memory and knows no industry. Everything industry specific lives in a pack (`src/packs/<pack>`) that implements `IndustryPack` (`src/lib/team/pack.ts`): roster, main bot name, routing signals, built in replies, model tools, prompt lines, approval kinds it executes, and loading and saving its own records. Packs are registered in `src/packs/index.ts`; the workspace row names its pack (`workspaces.pack`) and the loaded workspace carries the pack object as `ws.pack`. Core code never imports a pack; `src/lib/team/pack.test.ts` fails if it does, and runs a made up second pack through the core. New chat block types go in `src/packs/blocks.ts`. The construction pack is the only one today.
+- **Engine:** `src/lib/team/engine.ts` `respond(ws, threadBot, text)`. The main bot's own requests (memory, tasks, approvals) are core. Routing without a model: scored signals (`src/lib/team/router.ts`, pack signals in `src/packs/construction/signals.ts`); on a near tie the main bot asks with choice buttons. With a model: `src/lib/team/model.ts`, any OpenAI compatible API, core tools plus the pack's tools, each owned by a bot (the tool used decides which bot answers; `shared` tools never take the reply over).
+- **Construction skills** (`src/packs/construction/skills.ts`) are shared by both paths: scope snapshot, takeoff request, RFQ draft, proposal outline, submittal checklist, GC emails, bid or pass cards. `change()` in the core store queues an approval or runs it when the bot is set to "Just do it".
+- **ITB parser** (`src/packs/construction/itb`): BuildingConnected, ConstructConnect, Procore, direct GC email, client job lists. Scope is read through the company's trade (`withTrade`).
+- **Bot team in SQL:** `create_workspace(name, pack, trade, your_name, bots)` takes the roster from the app (`startingBots(pack)`), so the roster lives only in the pack.
 - Server actions with role checks: `src/app/team-actions.ts`, `src/app/actions.ts`, `src/app/auth-actions.ts`.
 
 ## Infrastructure
 
-- Supabase project **bidbot** (`xaxustluwpkuvfjeekfd`, us-east-1, org Maverick Takeoff Solutions). Migrations in `supabase/migrations` are applied. Schema tests run on an in process Postgres (`supabase/schema.test.ts`).
+- Supabase project **bidbot** (`xaxustluwpkuvfjeekfd`, us-east-1, org Maverick Takeoff Solutions). Migrations 0001 to 0003 are applied (0003_industry_packs on 11.03). The security advisor flags `create_workspace` and `accept_invite` as callable by signed in users; that is intended, anonymous callers are revoked. Schema tests run on an in process Postgres (`supabase/schema.test.ts`).
 - GitHub: jbyrd777/BidBot, branch main.
 - Vercel: not deployed yet. Account `jesse-3234`, default team scope `skopeiq`, Hobby plan (must move to Pro before paying customers).
 
@@ -50,16 +53,46 @@ The Vercel token is in "BidBot Vercel Token.txt" on the Desktop. Keys go in env 
 
 ## Status
 
-Done: chat first bot team, approvals, tasks, memory, Vault (access settings), Settings (trade, rules, people and invites, autonomy, services), dashboard and bid board reports, workspaces with sign up, sign in, reset, company setup with sample invitations, invites by link with roles, scored routing. 38 tests pass; build passes.
+Done: chat first bot team, approvals, tasks, memory, Vault (access settings), Settings (trade, rules, people and invites, autonomy, services), dashboard and bid board reports, workspaces with sign up, sign in, reset, company setup with sample invitations, invites by link with roles, scored routing. Core and construction pack split done (11.03). 41 tests pass; build and lint pass.
+
+### Vision (11.03)
+
+The goal is a bot team that runs a subcontractor's whole office on its own: win the work, run the jobs, get paid, stay compliant, and report to the owner. People keep the field work, prices, signatures and payments. Working name for the company and platform: STWRD (trademark and domain not checked yet).
+
+Departments and bots:
+- Win work: Bid Desk, Scope Analyst, Takeoff Coordinator, Proposal Builder, GC Follow Up (built).
+- Get paid: Billing (pay apps, lien waivers, retention, collections), Bookkeeper (invoice to PO matching, job cost), Compliance (insurance certificates, licenses, certified payroll, safety, prequal). Not built.
+- Run work: Project Coordinator (submittals, RFIs, change order log, minutes, closeout), Buyer (with Vendor RFQ: POs, lead times, deliveries), Scheduler (crews, GC lookaheads), Field Assistant by text (daily reports, T and M tickets, material requests). Submittals and Vendor RFQ exist; the rest is not built.
+- Lead: Foreman, the main bot, writes the weekly owner report (pipeline, backlog, cash, jobs at risk).
+
+Autonomy ladder, set per routine, not per company. A routine moves up only after a track record the company can see (how many times it ran, how often a person changed the draft):
+1. Drafts: the bot prepares, a person does it.
+2. Asks: approval card, "Do it" / "Don't" (default).
+3. Does and reports: runs on its own and posts what it did (internal changes, routine follow ups, reminders).
+4. Never on its own: prices, signatures, contracts, payments and anything legal. These always ask.
+
+### Direction (decided 11.03)
+
+- The moat is the inbox, the parser, the bid board and the follow up, not the chat. A general assistant can match a chat window; it cannot match reading every invitation from every platform. Build in that order.
+- Win on proactive work. The first night after a company connects its inbox, it wakes up to a screened bid board of the last 30 days and a morning digest email. Every later feature should add something the team finds waiting for them.
+- Meet people where they work: email first (estimators), phone second (owners). The app is where they go to decide, not where they have to live.
+- Sell flooring first, where Maverick already has warm relationships, even though the code supports every trade.
+- Pricing is flat, never usage based for the customer. Meter usage in `usage_events` for our own margins only. Two tiers proposed: software, and a higher done with you tier that bundles Maverick takeoffs through the Takeoff Coordinator (open decision; `PRODUCT.md` still says "not tied to an outside estimating service").
+- First customers are pilots with existing Maverick flooring clients, billed by invoice. Before building more, screen record each one triaging invitations.
 
 Next, in order:
 1. Run locally against Supabase; test sign up, setup, invite, chat, approvals end to end.
-2. Connect Grok (env above); check tool calling works with the chosen model; meter usage into `usage_events`.
-3. Deploy a private Vercel preview with the env vars.
-4. Real inbox: Gmail and Outlook ingestion into `inbound_messages` and the parser.
-5. Billing: Stripe test mode plans, seats, monthly AI credit, stop at zero.
-6. Bot email address, phone, cloud computers, Slack, routines.
-7. Public launch: Vercel Pro, domain, own email sender (Resend), Stripe live, terms and privacy.
+2. Deploy a private Vercel preview with the env vars.
+3. Real inbox: Gmail and Outlook ingestion (read only) into `inbound_messages` and the parser, with a 30 day backfill on connect. Read PDF attachments.
+4. Bot email address and a morning digest routine (new invitations, what fits, what is due, which GC has not answered).
+5. Pilot with two or three current flooring clients; invoice by hand; screen record their triage and adjust.
+5a. Before adding departments: add the autonomy ladder with a visible track record per routine. (The core and pack split is done.)
+5b. Get paid department: Billing, Bookkeeper, Compliance, plus T and M tickets by text from the foreman. Build next because recovered money is the easiest value to prove.
+5c. Run work department: Project Coordinator, Buyer, Scheduler, Field Assistant.
+6. Connect Grok (env above); check tool calling works with the chosen model; meter usage into `usage_events`.
+7. Billing: Stripe test mode with flat plans and seats; no customer facing credit or stop at zero.
+8. Public launch: Vercel Pro, domain, own email sender (Resend), Stripe live, terms and privacy.
+9. Later: cloud computers (for example pulling plan sets from BuildingConnected), phone, Slack.
 
 ## How Jesse wants things
 

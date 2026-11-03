@@ -1,4 +1,4 @@
-import { DEFAULT_TRADE, tradeProfile } from "@/lib/trades";
+import { DEFAULT_TRADE, tradeProfile } from "@/packs/construction/trades";
 
 /** Scope and location detection shared by every parser. Scope is read through the company's trade profile. */
 

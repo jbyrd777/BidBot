@@ -1,7 +1,7 @@
-import type { BotKind } from "@/lib/bots/roster";
-import type { Block as BidBlock } from "@/lib/agent/types";
+import type { PackBlock } from "@/packs/blocks";
 
-export type BotId = "chief" | BotKind;
+/** "chief" is the main bot every workspace has; the other ids come from the workspace's industry pack. */
+export type BotId = string;
 
 /** ask: every change waits for an OK. auto: changes inside the app run on their own; sending and paying still ask. */
 export type Autonomy = "ask" | "auto";
@@ -16,7 +16,8 @@ export interface TeamBot {
   access: string[];
 }
 
-export type ApprovalKind = "decide" | "create_task" | "send_email";
+/** create_task and send_email are handled by the core; packs add their own kinds (construction: decide). */
+export type ApprovalKind = "create_task" | "send_email" | (string & {});
 
 export interface Approval {
   id: string;
@@ -36,7 +37,8 @@ export interface TaskItem {
   at: string;
   title: string;
   owner: string;
-  bidId?: string;
+  /** The pack record this task is about, such as a bid id. */
+  ref?: string;
   due?: string;
   status: "open" | "done";
 }
@@ -50,7 +52,7 @@ export interface Fact {
 
 /** Everything a message can carry under its text. */
 export type Block =
-  | BidBlock
+  | PackBlock
   | { type: "handoff"; to: BotId; note: string }
   | { type: "approval"; approvalId: string }
   | { type: "doc"; title: string; sections: { heading: string; lines: string[] }[] }

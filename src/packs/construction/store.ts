@@ -1,8 +1,9 @@
-import { allFixtures } from "@/lib/itb/__fixtures__/emails";
-import { parseItbEmail, projectKey, type InboundEmail, type ParsedItb } from "@/lib/itb";
-import { withTrade } from "@/lib/itb/scope";
-import { tradeProfile } from "@/lib/trades";
-import { screenItb, type ScreenResult, type ScreenSettings } from "@/lib/itb/screen";
+import type { TeamHolder } from "@/lib/team/store";
+import { allFixtures } from "@/packs/construction/itb/__fixtures__/emails";
+import { parseItbEmail, projectKey, type InboundEmail, type ParsedItb } from "@/packs/construction/itb";
+import { withTrade } from "@/packs/construction/itb/scope";
+import { tradeProfile } from "@/packs/construction/trades";
+import { screenItb, type ScreenResult, type ScreenSettings } from "@/packs/construction/itb/screen";
 
 export type Decision = "pending" | "bid" | "no_bid";
 
@@ -101,6 +102,9 @@ export interface BidHolder {
   /** Changes waiting to be saved; see lib/workspace. */
   changes?: { table: string; op: string; row: unknown }[];
 }
+
+/** A workspace on the construction pack: the core team plus the company and its bids. */
+export type ConstructionWs = TeamHolder & BidHolder;
 
 /** The demo company, seeded from the sample invitations. Used when no database is configured, and by tests. */
 export function demoBids(): BidHolder {

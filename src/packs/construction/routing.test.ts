@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { routeDetailed } from "./router";
+import { routeDetailed } from "@/lib/team/router";
+import { construction } from ".";
 
-const to = (t: string) => routeDetailed(t).bot;
+const to = (t: string) => routeDetailed(t, construction).bot;
 
 describe("router", () => {
   it("routes plain requests", () => {
@@ -27,8 +28,8 @@ describe("router", () => {
   });
 
   it("asks when two bots fit equally", () => {
-    const r = routeDetailed("follow up on the RFQ");
+    const r = routeDetailed("follow up on the RFQ", construction);
     expect([r.bot, r.tie].sort()).toEqual(["gc_follow_up", "vendor_rfq"]);
-    expect(routeDetailed("Draft an RFQ for Immokalee").tie).toBeUndefined();
+    expect(routeDetailed("Draft an RFQ for Immokalee", construction).tie).toBeUndefined();
   });
 });

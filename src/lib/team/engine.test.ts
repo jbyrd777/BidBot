@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 type Engine = typeof import("./engine");
 type Store = typeof import("./store");
-type Bids = typeof import("@/lib/data/store");
+type Bids = typeof import("@/packs/construction/store");
 let engine: Engine, store: Store, bids: Bids;
 let ws: import("@/lib/workspace/types").Workspace;
 
@@ -11,20 +11,20 @@ beforeAll(async () => {
   delete process.env.MODEL_API_KEY;
   engine = await import("./engine");
   store = await import("./store");
-  bids = await import("@/lib/data/store");
+  bids = await import("@/packs/construction/store");
   ws = (await import("@/lib/workspace/demo")).newDemoWorkspace();
 });
 
 describe("team engine", () => {
   it("routes requests to the bot that owns them", () => {
-    expect(engine.route("Draft an RFQ for Immokalee")).toBe("vendor_rfq");
-    expect(engine.route("queue the takeoff for Guess")).toBe("takeoff_coordinator");
-    expect(engine.route("outline a proposal")).toBe("proposal_builder");
-    expect(engine.route("submittal checklist please")).toBe("submittals");
-    expect(engine.route("scope snapshot for Gunster")).toBe("scope_analyst");
-    expect(engine.route("email Pinnacle for plans")).toBe("gc_follow_up");
-    expect(engine.route("remember that we never bid WA")).toBe("chief");
-    expect(engine.route("what's due this week")).toBe("bid_desk");
+    expect(engine.route("Draft an RFQ for Immokalee", ws.pack)).toBe("vendor_rfq");
+    expect(engine.route("queue the takeoff for Guess", ws.pack)).toBe("takeoff_coordinator");
+    expect(engine.route("outline a proposal", ws.pack)).toBe("proposal_builder");
+    expect(engine.route("submittal checklist please", ws.pack)).toBe("submittals");
+    expect(engine.route("scope snapshot for Gunster", ws.pack)).toBe("scope_analyst");
+    expect(engine.route("email Pinnacle for plans", ws.pack)).toBe("gc_follow_up");
+    expect(engine.route("remember that we never bid WA", ws.pack)).toBe("chief");
+    expect(engine.route("what's due this week", ws.pack)).toBe("bid_desk");
   });
 
   it("hands off from the main bot and answers in the same thread", async () => {

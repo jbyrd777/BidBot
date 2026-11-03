@@ -1,4 +1,5 @@
 import type { TeamHolder } from "@/lib/team/store";
+import type { PackState } from "@/packs";
 
 export type Role = "owner" | "admin" | "sales" | "estimator" | "project_manager" | "viewer";
 
@@ -9,7 +10,7 @@ export interface Change {
 }
 
 /** Everything one request needs about the signed in person's company. Loaded fresh per request; never shared. */
-export interface Workspace extends TeamHolder {
+export interface Workspace extends TeamHolder, PackState {
   id: string;
   mode: "demo" | "db";
   me: { userId: string; role: Role; name: string; about: string; email?: string };

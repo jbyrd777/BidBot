@@ -3,9 +3,9 @@ import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { Segmented } from "@/components/segmented";
 import { DecisionText, GcMark, RecommendationTag, ScopeChips, formatDue } from "@/components/labels";
-import { listBids, today, type Bid, type Decision } from "@/lib/data/store";
+import { listBids, today, type Bid, type Decision } from "@/packs/construction/store";
 import { getWorkspace } from "@/lib/workspace/load";
-import { daysBetween } from "@/lib/itb/dates";
+import { daysBetween } from "@/packs/construction/itb/dates";
 
 export const metadata = { title: "Bids" };
 

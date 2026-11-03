@@ -1,6 +1,5 @@
-import { DEFAULT_ROSTER } from "@/lib/bots/roster";
-import { decide, getBid, type BidHolder } from "@/lib/data/store";
-import type { Approval, BotId, Fact, Message, TaskItem, TeamBot, TeamState, Thread } from "./types";
+import type { AnyPack } from "./pack";
+import type { Approval, ApprovalKind, Block, BotId, Fact, Message, TaskItem, TeamBot, TeamState, Thread } from "./types";
 
 /**
  * The team's working state inside one workspace: bots, one thread per bot, approvals, tasks and memory.
@@ -8,22 +7,22 @@ import type { Approval, BotId, Fact, Message, TaskItem, TeamBot, TeamState, Thre
  * Nothing here is shared between companies.
  */
 
-export interface TeamHolder extends BidHolder {
+export interface TeamHolder {
+  /** The industry pack this workspace runs on. */
+  pack: AnyPack;
   team: TeamState;
+  /** Changes waiting to be saved; see lib/workspace. */
+  changes?: { table: string; op: string; row: unknown }[];
 }
 
-export const DEFAULT_MAIN_BOT: TeamBot = {
-  id: "chief",
-  name: "Foreman",
-  role: "Runs the team. Takes any request, hands it to the right bot and reports back",
-  status: "live",
-  autonomy: "ask",
-  access: [],
-};
+/** The bots a new workspace starts with: the main bot, then the pack's specialists. */
+export function startingBots(pack: AnyPack): TeamBot[] {
+  return [{ id: "chief", ...pack.mainBot }, ...pack.roster].map((b) => ({ id: b.id, name: b.name, role: b.role, status: "live" as const, autonomy: "ask" as const, access: [] as string[] }));
+}
 
-export function seedTeam(you = { name: "Jesse Byrd", about: "Owner. Makes the final bid or no bid call with the estimating lead." }): TeamState {
+export function seedTeam(pack: AnyPack, you = { name: "Jesse Byrd", about: "Owner. Makes the final bid or no bid call with the estimating lead." }): TeamState {
   return {
-    bots: [{ ...DEFAULT_MAIN_BOT }, ...DEFAULT_ROSTER.map((b) => ({ id: b.kind, name: b.name, role: b.role, status: "live" as const, autonomy: "ask" as const, access: [] as string[] }))],
+    bots: startingBots(pack),
     threads: [],
     approvals: [],
     tasks: [],
@@ -96,15 +95,23 @@ export function forget(ws: TeamHolder, id: string) {
 
 /** Carry out an approved change. Only changes inside the app run here; sending needs a connected mailbox. */
 export function execute(ws: TeamHolder, a: Approval): string {
-  if (a.kind === "decide") {
-    const bid = decide(ws, a.payload.bidId, a.payload.decision as "bid" | "no_bid");
-    return bid ? `${bid.projectName} marked as ${a.payload.decision === "bid" ? "bidding" : "not bidding"}` : "That bid is no longer on the board";
-  }
   if (a.kind === "create_task") {
-    const t = addTask(ws, { title: a.payload.title, owner: a.payload.owner, bidId: a.payload.bidId || undefined, due: a.payload.due || undefined });
+    const t = addTask(ws, { title: a.payload.title, owner: a.payload.owner, ref: a.payload.ref || undefined, due: a.payload.due || undefined });
     return `Task added for ${t.owner}: ${t.title}`;
   }
-  return "Sending needs a connected mailbox. Connect Gmail or Outlook in the Vault.";
+  if (a.kind === "send_email") return "Sending needs a connected mailbox. Connect Gmail or Outlook in the Vault.";
+  return ws.pack.execute(ws, a) ?? "That kind of change is not available here";
+}
+
+/** A change a bot wants to make: queued for an OK, or carried out now when the bot runs on its own. */
+export function change(ws: TeamHolder, botId: BotId, threadBot: BotId, kind: ApprovalKind, summary: string, payload: Record<string, string>): Block {
+  const bot = getBot(ws, botId);
+  const ap = addApproval(ws, { botId, threadId: thread(ws, threadBot).id, kind, summary, payload });
+  if (bot?.autonomy === "auto") {
+    ap.status = "done";
+    ap.result = execute(ws, ap);
+  }
+  return { type: "approval", approvalId: ap.id };
 }
 
 export function resolve(ws: TeamHolder, id: string, ok: boolean): Approval | undefined {
@@ -118,7 +125,7 @@ export function resolve(ws: TeamHolder, id: string, ok: boolean): Approval | und
     a.status = "done";
   }
   log(ws, "approvals", "update", a);
-  post(ws, thread(ws, a.threadId.replace(/^t-/, "") as BotId), { from: a.botId, text: ok ? `Done. ${a.result}.` : "Okay, I left it.", blocks: [] });
+  post(ws, thread(ws, a.threadId.replace(/^t-/, "")), { from: a.botId, text: ok ? `Done. ${a.result}.` : "Okay, I left it.", blocks: [] });
   return a;
 }
 
@@ -142,5 +149,3 @@ export function renameMainBot(ws: TeamHolder, name: string) {
   b.name = name;
   log(ws, "bots", "update", b);
 }
-
-export { getBid };

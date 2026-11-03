@@ -5,7 +5,7 @@ import { Bell, ChatCircleDots, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { signOut } from "@/app/team-actions";
 import { MobileNav, Sidebar } from "@/components/sidebar";
 import { initials } from "@/components/team/chat-screen";
-import { listBids } from "@/lib/data/store";
+import { listBids } from "@/packs/construction/store";
 import { waiting } from "@/lib/team/store";
 import { getWorkspace } from "@/lib/workspace/load";
 import { ROLE_LABEL } from "@/lib/workspace/types";

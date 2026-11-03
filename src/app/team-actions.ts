@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { allFixtures } from "@/lib/itb/__fixtures__/emails";
-import { ingest, loadSamples, rescreen } from "@/lib/data/store";
+import { allFixtures } from "@/packs/construction/itb/__fixtures__/emails";
+import { ingest, loadSamples, rescreen } from "@/packs/construction/store";
 import { respond } from "@/lib/team/engine";
-import { forget, getBot, remember, renameMainBot, resolve, setAutonomy, toggleAccess } from "@/lib/team/store";
+import { forget, getBot, remember, renameMainBot, resolve, setAutonomy, startingBots, toggleAccess } from "@/lib/team/store";
 import type { BotId } from "@/lib/team/types";
-import { TRADES } from "@/lib/trades";
+import { TRADES } from "@/packs/construction/trades";
 import { dbConfigured } from "@/lib/supabase/env";
+import { DEFAULT_PACK, packFor } from "@/packs";
 import { supabaseServer } from "@/lib/supabase/server";
 import { commit } from "@/lib/workspace/commit";
 import { getWorkspace, WS_COOKIE } from "@/lib/workspace/load";
@@ -140,7 +141,9 @@ export async function createWorkspace(formData: FormData) {
   const you = String(formData.get("you_name") ?? "").trim().slice(0, 80);
   if (!name) return;
   const sb = await supabaseServer();
-  const { data, error } = await sb.rpc("create_workspace", { ws_name: name, ws_trade: TRADES.some((t) => t.key === trade) ? trade : "flooring", your_name: you });
+  const pack = packFor(DEFAULT_PACK);
+  const bots = startingBots(pack).map(({ id, name, role }) => ({ id, name, role }));
+  const { data, error } = await sb.rpc("create_workspace", { ws_name: name, ws_pack: pack.key, ws_trade: TRADES.some((t) => t.key === trade) ? trade : "flooring", your_name: you, ws_bots: bots });
   if (error) throw new Error(`Could not create the workspace: ${error.message}`);
   (await cookies()).set(WS_COOKIE, data as string, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 365 });
   if (formData.get("samples") === "on") {

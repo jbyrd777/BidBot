@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ingest, type Bid, type Company } from "./store";
-import { bcInviteRaisingCanes } from "@/lib/itb/__fixtures__/emails";
+import { bcInviteRaisingCanes } from "@/packs/construction/itb/__fixtures__/emails";
 
 const company: Company = {
   id: "t",

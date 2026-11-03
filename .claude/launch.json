@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "demo",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "PATH=$HOME/.local/node/bin:$PATH NODE_ENV=test DEMO_TODAY=2026-11-02 npx next dev -p 3100"],
+      "port": 3100
+    }
+  ]
+}

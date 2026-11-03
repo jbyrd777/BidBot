@@ -1,8 +1,8 @@
 import { formatDue } from "@/components/labels";
-import { getCompany, listBids, today, trade, type Bid, type BidHolder, type Decision } from "@/lib/data/store";
-import { projectKey } from "@/lib/itb";
-import { daysBetween } from "@/lib/itb/dates";
-import type { Recommendation } from "@/lib/itb/screen";
+import { getCompany, listBids, today, trade, type Bid, type BidHolder, type Decision } from "@/packs/construction/store";
+import { projectKey } from "@/packs/construction/itb";
+import { daysBetween } from "@/packs/construction/itb/dates";
+import type { Recommendation } from "@/packs/construction/itb/screen";
 import type { BidCard } from "./types";
 
 /**

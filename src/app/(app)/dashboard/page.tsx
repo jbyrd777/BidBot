@@ -6,9 +6,9 @@ import { DueChart } from "@/components/due-chart";
 import { Gauge } from "@/components/gauge";
 import { Segmented } from "@/components/segmented";
 import { GcMark, REC_STYLE, formatDue } from "@/components/labels";
-import { getCompany, listBids, today, trade, type Bid } from "@/lib/data/store";
+import { getCompany, listBids, today, trade, type Bid } from "@/packs/construction/store";
 import { getWorkspace } from "@/lib/workspace/load";
-import { daysBetween } from "@/lib/itb/dates";
+import { daysBetween } from "@/packs/construction/itb/dates";
 import {
   PLATFORM_LABEL,
   dueByDay,
@@ -20,7 +20,7 @@ import {
   timeUsed,
   topSenders,
   weekday,
-} from "@/lib/dashboard";
+} from "@/packs/construction/dashboard";
 
 export const metadata = { title: "Dashboard" };
 export const instant = false;

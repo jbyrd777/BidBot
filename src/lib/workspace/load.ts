@@ -1,8 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { Bid, Company } from "@/lib/data/store";
-import type { ScreenSettings } from "@/lib/itb/screen";
+import { packFor, type PackState } from "@/packs";
 import { dbConfigured } from "@/lib/supabase/env";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { Approval, BotId, Fact, TaskItem, TeamBot, Thread } from "@/lib/team/types";
@@ -46,19 +45,18 @@ async function loadWorkspace(): Promise<Workspace | "signed_out" | "no_workspace
   const me = memberships.find((m) => m.workspace_id === wanted) ?? memberships[0];
   const wsId = me.workspace_id as string;
 
-  const [w, bots, msgs, approvals, tasks, facts, bids] = await Promise.all([
+  const [w, bots, msgs, approvals, tasks, facts] = await Promise.all([
     sb.from("workspaces").select("*").eq("id", wsId).single(),
     sb.from("bots").select("*").eq("workspace_id", wsId).order("sort"),
     sb.from("messages").select("*").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(600),
     sb.from("approvals").select("*").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(300),
     sb.from("tasks").select("*").eq("workspace_id", wsId).order("created_at"),
     sb.from("facts").select("*").eq("workspace_id", wsId).order("created_at"),
-    sb.from("bids").select("data, decision, decided_at").eq("workspace_id", wsId),
   ]);
   if (w.error || !w.data) throw new Error(`Could not load the workspace: ${w.error?.message ?? "not found"}`);
 
-  const settings = { ...(w.data.settings as ScreenSettings), trade: w.data.trade as string };
-  const company: Company = { id: wsId, name: w.data.name as string, settings, trade: w.data.trade as string, weeklyCapacity: w.data.weekly_capacity as number };
+  const pack = packFor(w.data.pack as string);
+  const records = (await pack.load(sb, w.data)) as PackState;
 
   const threads = new Map<string, Thread>();
   for (const m of [...(msgs.data ?? [])].reverse() as Row[]) {
@@ -70,8 +68,8 @@ async function loadWorkspace(): Promise<Workspace | "signed_out" | "no_workspace
   return {
     id: wsId,
     mode: "db",
-    company,
-    bids: ((bids.data ?? []) as Row[]).map((r) => ({ ...(r.data as Bid), decision: r.decision as Bid["decision"], decidedAt: (r.decided_at as string) ?? undefined })),
+    pack,
+    ...records,
     team: {
       bots: ((bots.data ?? []) as Row[]).map((b) => ({ id: b.id, name: b.name, role: b.role, status: b.status, autonomy: b.autonomy, access: b.access }) as TeamBot),
       threads: [...threads.values()],
@@ -79,7 +77,7 @@ async function loadWorkspace(): Promise<Workspace | "signed_out" | "no_workspace
         (a) =>
           ({ id: a.id, at: a.created_at, botId: a.bot_id, threadId: `t-${a.thread_bot}`, kind: a.kind, summary: a.summary, payload: a.payload, status: a.status, result: a.result ?? undefined }) as Approval,
       ),
-      tasks: ((tasks.data ?? []) as Row[]).map((t) => ({ id: t.id, at: t.created_at, title: t.title, owner: t.owner, bidId: t.bid_id ?? undefined, due: t.due ?? undefined, status: t.status }) as TaskItem),
+      tasks: ((tasks.data ?? []) as Row[]).map((t) => ({ id: t.id, at: t.created_at, title: t.title, owner: t.owner, ref: t.ref ?? undefined, due: t.due ?? undefined, status: t.status }) as TaskItem),
       facts: ((facts.data ?? []) as Row[]).map((f) => ({ id: f.id, at: f.created_at, text: f.text, botId: f.bot_id }) as Fact),
       you: { name: (me.display_name as string) || user.email || "You", about: (me.about as string) ?? "" },
     },

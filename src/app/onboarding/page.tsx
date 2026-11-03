@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createWorkspace } from "@/app/team-actions";
 import { AuthShell, field, primary } from "@/components/auth-shell";
 import { dbConfigured } from "@/lib/supabase/env";
-import { TRADES } from "@/lib/trades";
+import { TRADES } from "@/packs/construction/trades";
 import { currentUser, myWorkspaces } from "@/lib/workspace/load";
 
 export const metadata = { title: "Set up your workspace" };

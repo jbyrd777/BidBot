@@ -1,7 +1,7 @@
-import type { Recommendation } from "@/lib/itb/screen";
-import type { Decision } from "@/lib/data/store";
-import type { DueDate } from "@/lib/itb";
-import { daysBetween } from "@/lib/itb/dates";
+import type { Recommendation } from "@/packs/construction/itb/screen";
+import type { Decision } from "@/packs/construction/store";
+import type { DueDate } from "@/packs/construction/itb";
+import { daysBetween } from "@/packs/construction/itb/dates";
 
 export function formatDue(due: DueDate | undefined, today: string): { date: string; when: string; late: boolean } {
   if (!due) return { date: "No date", when: "Ask the GC", late: false };

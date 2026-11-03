@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { beforeAll, describe, expect, it } from "vitest";
+import { startingBots } from "@/lib/team/store";
+import { construction } from "@/packs/construction";
 
 /**
  * Loads the real migration into an in process Postgres with a small stand in for Supabase's auth schema,
@@ -37,6 +39,9 @@ async function as<T>(user: string, email: string, fn: () => Promise<T>): Promise
 const one = async <T,>(sql: string, params: unknown[] = []) => (await db.query<T>(sql, params)).rows[0];
 const rows = async <T,>(sql: string, params: unknown[] = []) => (await db.query<T>(sql, params)).rows;
 
+/** The bot team the app passes in, straight from the construction pack. */
+const BOTS = JSON.stringify(startingBots(construction).map(({ id, name, role }) => ({ id, name, role })));
+
 let wsA: string;
 let wsB: string;
 
@@ -45,10 +50,11 @@ beforeAll(async () => {
   await db.exec(AUTH_STUB);
   await db.exec(readFileSync(join(__dirname, "migrations/0001_init.sql"), "utf8"));
   await db.exec(readFileSync(join(__dirname, "migrations/0002_private_helpers.sql"), "utf8"));
+  await db.exec(readFileSync(join(__dirname, "migrations/0003_industry_packs.sql"), "utf8"));
   await db.exec(`grant select, insert, update, delete on all tables in schema public to authenticated;`);
   await db.exec(`insert into auth.users values ('${ALICE}', 'alice@a.com'), ('${BOB}', 'bob@b.com'), ('${CARL}', 'carl@a.com');`);
-  wsA = (await as(ALICE, "alice@a.com", () => one<{ id: string }>("select create_workspace('Alpha Flooring', 'flooring', 'Alice') as id")))!.id;
-  wsB = (await as(BOB, "bob@b.com", () => one<{ id: string }>("select create_workspace('Bravo Electric', 'electrical', 'Bob') as id")))!.id;
+  wsA = (await as(ALICE, "alice@a.com", () => one<{ id: string }>("select create_workspace('Alpha Flooring', 'construction', 'flooring', 'Alice', $1) as id", [BOTS])))!.id;
+  wsB = (await as(BOB, "bob@b.com", () => one<{ id: string }>("select create_workspace('Bravo Electric', 'construction', 'electrical', 'Bob', $1) as id", [BOTS])))!.id;
 }, 60_000);
 
 describe("workspace schema", () => {
@@ -57,6 +63,14 @@ describe("workspace schema", () => {
     expect(bots.map((b) => b.id)).toEqual(["chief", "bid_desk", "scope_analyst", "takeoff_coordinator", "vendor_rfq", "proposal_builder", "gc_follow_up", "submittals"]);
     const me = await as(ALICE, "alice@a.com", () => one<{ role: string }>("select role from members where workspace_id = $1", [wsA]));
     expect(me?.role).toBe("owner");
+    const w = await as(ALICE, "alice@a.com", () => one<{ pack: string }>("select pack from workspaces where id = $1", [wsA]));
+    expect(w?.pack).toBe("construction");
+  });
+
+  it("refuses a bot team without the main bot or with a bad bot id", async () => {
+    const make = (bots: unknown) => as(ALICE, "alice@a.com", () => db.query("select create_workspace('X', 'construction', 'flooring', 'A', $1)", [JSON.stringify(bots)]));
+    await expect(make([{ id: "bid_desk", name: "Bid Desk", role: "" }])).rejects.toThrow(/main bot/);
+    await expect(make([{ id: "chief", name: "Foreman", role: "" }, { id: "Bad Id!", name: "x", role: "" }])).rejects.toThrow(/not valid/);
   });
 
   it("never shows one company's data to another", async () => {

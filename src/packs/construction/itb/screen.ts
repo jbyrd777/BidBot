@@ -1,6 +1,6 @@
 import { daysBetween } from "./dates";
 import type { ParsedItb } from "./types";
-import { tradeProfile } from "@/lib/trades";
+import { tradeProfile } from "@/packs/construction/trades";
 
 export interface ScreenSettings {
   serviceStates: string[];

@@ -8,10 +8,10 @@ The first working piece of the flooring bot team: a multi tenant web app where t
 
 ## What works today
 
-- **ITB parser** (`src/lib/itb`) for the five ways invitations actually arrive: BuildingConnected invites and messages, ConstructConnect invites and reminders, Procore invites (including forwarded ones), direct GC emails (plain or HTML), and a client's list of several jobs in one email.
+- **ITB parser** (`src/packs/construction/itb`) for the five ways invitations actually arrive: BuildingConnected invites and messages, ConstructConnect invites and reminders, Procore invites (including forwarded ones), direct GC emails (plain or HTML), and a client's list of several jobs in one email.
 - It extracts project, package, GC, contact, location and state, bid due date and time, job walk, questions due, start date, project size, flooring scope (carpet, carpet tile, LVT, VCT, sheet vinyl, rubber, tile, wood, resinous, polished concrete, base, floor prep), plan links and reference numbers.
 - Updates (revised due dates, addenda, site walks) fold into the bid they belong to and show in its history.
-- **Screening** (`src/lib/itb/screen.ts`) recommends bid, review or likely pass with reasons: service area, lead time, flooring scope, preferred and blocked GCs. It only recommends; a person decides.
+- **Screening** (`src/packs/construction/itb/screen.ts`) recommends bid, review or likely pass with reasons: service area, lead time, flooring scope, preferred and blocked GCs. It only recommends; a person decides.
 - **Bid board** with a three week due date rule, filters by decision, and a detail page with the bid or no bid call and history.
 - **Team page** with the seven bot roster.
 - **Database schema** (`supabase/migrations/0001_init.sql`): companies, members with flooring roles, settings, bots, inbound messages, ITBs and events, all behind row level security by company.
@@ -30,7 +30,7 @@ DEMO_TODAY=2026-11-02 npm run dev
 
 ## Not built yet
 
-- The demo store (`src/lib/data/store.ts`) keeps everything in memory and resets on restart. Next step is a Supabase store behind the same functions, with sign in.
+- The demo store (`src/packs/construction/store.ts`) keeps everything in memory and resets on restart. Next step is a Supabase store behind the same functions, with sign in.
 - Reading email live: a Gmail and Microsoft 365 connector that feeds `parseItbEmail`, plus a bot inbox per company.
 - Phone numbers, bot computers and the other six bots.
 - Attachments: ITB PDFs and Word files are not read yet.
@@ -39,11 +39,14 @@ DEMO_TODAY=2026-11-02 npm run dev
 
 | Path | What it is |
 | --- | --- |
-| `src/lib/itb/parsers` | One parser per platform |
-| `src/lib/itb/index.ts` | `parseItbEmail`, platform detection, project matching |
-| `src/lib/itb/__fixtures__` | Real sample invitations |
-| `src/lib/data/store.ts` | Demo data store the pages read from |
-| `src/lib/bots/roster.ts` | Default bot team |
+| `src/lib/team`, `src/lib/workspace` | The core: bot team, chat, approvals, tasks, memory, workspaces. Knows no industry |
+| `src/lib/team/pack.ts` | The industry pack contract |
+| `src/packs/index.ts` | Registered packs |
+| `src/packs/construction` | The construction pack: roster, routing, skills, model tools, bids |
+| `src/packs/construction/itb/parsers` | One parser per platform |
+| `src/packs/construction/itb/index.ts` | `parseItbEmail`, platform detection, project matching |
+| `src/packs/construction/itb/__fixtures__` | Real sample invitations |
+| `src/packs/construction/store.ts` | Bids: ingest, screen, decide |
 | `src/app` | Team page, bid board, bid detail |
 | `supabase/migrations` | Database schema |
 

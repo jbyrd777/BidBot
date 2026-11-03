@@ -1,5 +1,5 @@
-import type { Decision } from "@/lib/data/store";
-import type { Recommendation } from "@/lib/itb/screen";
+import type { Decision } from "@/packs/construction/store";
+import type { Recommendation } from "@/packs/construction/itb/screen";
 
 export type ChatRole = "user" | "assistant";
 

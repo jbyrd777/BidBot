@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowSquareOut, Check, X, ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr";
 import { DecisionText, GcMark, RecommendationTag, ScopeChips, formatDue } from "@/components/labels";
-import { getBid, today, trade } from "@/lib/data/store";
+import { getBid, today, trade } from "@/packs/construction/store";
 import { getWorkspace } from "@/lib/workspace/load";
 import { setDecision } from "@/app/actions";
 

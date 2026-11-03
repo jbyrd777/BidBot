@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Desktop } from "@phosphor-icons/react/dist/ssr";
 import { REC_STYLE } from "@/components/labels";
-import type { BidCard } from "@/lib/agent/types";
+import type { BidCard } from "@/packs/construction/agent/types";
 import { botName, getBot, thread, waiting } from "@/lib/team/store";
 import type { Workspace } from "@/lib/workspace/types";
 import type { Approval, BotId, Block } from "@/lib/team/types";

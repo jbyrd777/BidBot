@@ -1,11 +1,6 @@
-import type { TeamHolder } from "./store";
-import { localReply } from "@/lib/agent/local";
-import { findBid, findGcBids } from "@/lib/agent/ops";
-import { listBids } from "@/lib/data/store";
-import type { Bid } from "@/lib/data/store";
-import { decisionCard, draftProposal, draftRfq, gcEmail, requestTakeoff, scopeSnapshot, submittalChecklist, change, type SkillResult } from "./skills";
-import { botName, getBot, post, remember, team, thread, waiting } from "./store";
-import type { BotId, Block } from "./types";
+import type { SkillResult } from "./pack";
+import { botName, change, getBot, post, remember, team, thread, waiting, type TeamHolder } from "./store";
+import type { BotId } from "./types";
 import { modelConfigured, modelTurn } from "./model";
 import { routeDetailed } from "./router";
 
@@ -13,51 +8,9 @@ const has = (s: string, ...w: string[]) => w.some((x) => s.includes(x));
 
 export { route } from "./router";
 
-function targetBid(ws: TeamHolder, text: string): Bid | undefined {
-  return findBid(ws, text) ?? findGcBids(ws, text.toLowerCase())[0];
-}
-
-function ask(what: string): SkillResult {
-  return { text: `Which bid is this for? Name the project or the GC and I will ${what}.`, blocks: [] };
-}
-
-/** Built in handling for each bot, used until a language model is connected. */
+/** Built in handling, used until a language model is connected: the main bot here, specialists in the pack. */
 function local(ws: TeamHolder, bot: BotId, text: string, threadBot: BotId): SkillResult {
-  const s = text.toLowerCase();
-  const bid = targetBid(ws, text);
-  switch (bot) {
-    case "scope_analyst":
-      return bid ? scopeSnapshot(ws, bid) : ask("write the scope snapshot");
-    case "takeoff_coordinator":
-      return bid ? requestTakeoff(ws, bid, threadBot) : ask("queue the takeoff");
-    case "vendor_rfq":
-      return bid ? draftRfq(ws, bid) : ask("draft the RFQ");
-    case "proposal_builder":
-      return bid ? draftProposal(ws, bid) : ask("outline the proposal");
-    case "submittals":
-      return bid ? submittalChecklist(ws, bid) : ask("build the checklist");
-    case "gc_follow_up": {
-      if (!bid) return ask("draft it");
-      const purpose = has(s, "plan", "spec", "drawing") ? "plans" : has(s, "decline", "pass", "regret") ? "decline" : has(s, "intent", "we're bidding", "we are bidding") ? "intent" : "followup";
-      return gcEmail(ws, bid, purpose);
-    }
-    case "chief":
-      return chief(ws, text, threadBot);
-    default: {
-      const r = localReply(ws, text);
-      const blocks: Block[] = r.blocks.map((b) => {
-        if (b.type !== "confirm") return b;
-        const full = listBids(ws).find((x) => x.id === b.bid.id)!;
-        return decisionCard(ws, full, b.decision, threadBot);
-      });
-      const text2 = r.blocks.some((b) => b.type === "confirm")
-        ? getBot(ws, "bid_desk")?.autonomy === "auto"
-          ? "Done. I updated the board; each change is listed below."
-          : `${blocks.length === 1 ? "This call is" : `These ${blocks.length} calls are`} waiting for your OK. Passing does not email the GC; ask for a draft if you want one.`
-        : r.text;
-      return { text: text2, blocks };
-    }
-  }
+  return bot === "chief" ? chief(ws, text, threadBot) : ws.pack.reply(ws, bot, text, threadBot);
 }
 
 function chief(ws: TeamHolder, text: string, threadBot: BotId): SkillResult {
@@ -81,7 +34,7 @@ function chief(ws: TeamHolder, text: string, threadBot: BotId): SkillResult {
   }
   const roster = team(ws).bots.filter((b) => b.id !== "chief").map((b) => b.name).join(", ");
   return {
-    text: `I run the team: ${roster}. Ask me anything about your bids, scope, takeoffs, vendor pricing, proposals, GC follow up or submittals and I will hand it to the right bot. I can also remember things for the whole team and keep your task list. Anything that changes data or goes out waits for your OK.`,
+    text: `I run the team: ${roster}. Ask me anything about ${ws.pack.covers} and I will hand it to the right bot. I can also remember things for the whole team and keep your task list. Anything that changes data or goes out waits for your OK.`,
     blocks: [],
   };
 }
@@ -109,7 +62,7 @@ export async function respond(ws: TeamHolder, threadBot: BotId, text: string, op
   if (threadBot === "chief") {
     if (opts.to && getBot(ws, opts.to)) target = opts.to;
     else {
-      const r = routeDetailed(text);
+      const r = routeDetailed(text, ws.pack);
       if (r.tie) {
         post(ws, t, {
           from: "chief",

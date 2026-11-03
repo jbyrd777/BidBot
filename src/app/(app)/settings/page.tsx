@@ -3,11 +3,11 @@ import { addSamples, saveProfile } from "@/app/team-actions";
 import { InviteForm } from "@/components/team/invite-form";
 import { AutonomySwitch } from "@/components/team/client";
 import { BotAvatar } from "@/components/team/chat-screen";
-import { getCompany } from "@/lib/data/store";
+import { getCompany } from "@/packs/construction/store";
 import { PROVIDERS, configured } from "@/lib/providers";
 import { getWorkspace, teamMembers } from "@/lib/workspace/load";
 import { CAN_MANAGE, ROLE_LABEL } from "@/lib/workspace/types";
-import { TRADES } from "@/lib/trades";
+import { TRADES } from "@/packs/construction/trades";
 
 export const metadata = { title: "Settings" };
 export const instant = false;

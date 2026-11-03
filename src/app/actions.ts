@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { decide, type Decision } from "@/lib/data/store";
+import { decide, type Decision } from "@/packs/construction/store";
 import { commit } from "@/lib/workspace/commit";
 import { getWorkspace } from "@/lib/workspace/load";
 import { CAN_DECIDE } from "@/lib/workspace/types";

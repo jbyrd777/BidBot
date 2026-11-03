@@ -1,4 +1,3 @@
-import type { Bid } from "@/lib/data/store";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { Approval, Fact, Message, TaskItem, TeamBot } from "@/lib/team/types";
 import type { Workspace } from "./types";
@@ -28,13 +27,8 @@ export async function commit(ws: Workspace) {
     if (e) throw new Error(`Could not save ${what}: ${e.message}`);
   };
 
-  const bids = of("bids").map((c) => c.row as Bid);
-  if (bids.length) {
-    const { error } = await sb.from("bids").upsert(
-      bids.map((b) => ({ workspace_id: id, id: b.id, data: b, due_date: b.due?.date ?? null, decision: b.decision, decided_at: b.decidedAt ?? null, decided_by: b.decision !== "pending" ? by : null, updated_at: new Date().toISOString() })),
-    );
-    fail("bids", error);
-  }
+  // The pack's own records first: tasks and approvals may point at them.
+  await ws.pack.save(sb, ws, changes, by);
 
   for (const c of of("bots")) {
     const b = c.row as TeamBot;
@@ -44,7 +38,7 @@ export async function commit(ws: Workspace) {
 
   const tasks = of("tasks").map((c) => c.row as TaskItem);
   if (tasks.length) {
-    const { error } = await sb.from("tasks").upsert(tasks.map((t) => ({ id: t.id, workspace_id: id, title: t.title, owner: t.owner, bid_id: t.bidId ?? null, due: t.due || null, status: t.status, created_at: t.at })));
+    const { error } = await sb.from("tasks").upsert(tasks.map((t) => ({ id: t.id, workspace_id: id, title: t.title, owner: t.owner, ref: t.ref ?? null, due: t.due || null, status: t.status, created_at: t.at })));
     fail("tasks", error);
   }
 
