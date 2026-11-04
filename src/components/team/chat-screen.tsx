@@ -4,8 +4,11 @@ import { REC_STYLE } from "@/components/labels";
 import type { BidCard } from "@/packs/construction/agent/types";
 import { botName, getBot, thread, waiting } from "@/lib/team/store";
 import type { Workspace } from "@/lib/workspace/types";
-import type { Approval, BotId, Block } from "@/lib/team/types";
+import type { Approval, BotId, Block, ComputerJob } from "@/lib/team/types";
+import { providerOn } from "@/lib/providers";
+import { CAN_MANAGE } from "@/lib/workspace/types";
 import { ApprovalButtons, AutonomySwitch, ChoiceButtons, Composer, EmailDraft, ScrollPin } from "./client";
+import { ComputerControls, JobWatch, RetryJob } from "./computer";
 
 export function initials(name: string) {
   return name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -262,18 +265,69 @@ export function ChatScreen({ ws, botId, initial }: { ws: Workspace; botId: BotId
           )}
         </section>
 
-        <section className="card p-5">
-          <h2 className="flex items-center gap-2 text-[15px] font-semibold">
-            <Desktop size={17} aria-hidden /> Computer
-          </h2>
-          <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">
-            Each bot can work on its own cloud computer, with live screens you can watch or take over. Add a computer provider key in Settings to turn it on.
-          </p>
-          <Link href="/settings" className="press mt-3 inline-flex h-8 items-center rounded-[8px] bg-sunk px-3 text-[12px] font-semibold hover:bg-ghost">
-            Open Settings
-          </Link>
-        </section>
+        <ComputerPanel ws={ws} botId={botId} />
       </aside>
     </div>
+  );
+}
+
+const JOB_STATUS: Record<ComputerJob["status"], { label: string; dot: string }> = {
+  queued: { label: "Waiting to start", dot: "bg-ghost" },
+  running: { label: "On the computer now", dot: "bg-sun animate-pulse" },
+  needs_you: { label: "Needs you to sign in", dot: "bg-ember" },
+  done: { label: "Done", dot: "bg-lime" },
+  failed: { label: "Could not finish", dot: "bg-stop" },
+};
+
+function ComputerPanel({ ws, botId }: { ws: Workspace; botId: BotId }) {
+  if (!providerOn("computers")) {
+    return (
+      <section className="card p-5">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold">
+          <Desktop size={17} aria-hidden /> Computer
+        </h2>
+        <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">
+          Each bot can work on its own cloud computer, with live screens you can watch or take over. Add a computer provider key in Settings to turn it on.
+        </p>
+        <Link href="/settings" className="press mt-3 inline-flex h-8 items-center rounded-[8px] bg-sunk px-3 text-[12px] font-semibold hover:bg-ghost">
+          Open Settings
+        </Link>
+      </section>
+    );
+  }
+  const jobs = ws.team.jobs.filter((j) => botId === "chief" || j.botId === botId).slice(-5).reverse();
+  const on = ws.team.computer?.status === "running";
+  const busy = ws.team.jobs.some((j) => j.status === "queued" || j.status === "running");
+  return (
+    <section className="card p-5">
+      <JobWatch active={busy} />
+      <h2 className="flex items-center justify-between gap-2 text-[15px] font-semibold">
+        <span className="flex items-center gap-2">
+          <Desktop size={17} aria-hidden /> Computer
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] font-medium text-ink-soft">
+          <span aria-hidden className={`h-2 w-2 rounded-full ${on ? "bg-lime" : "bg-ghost"}`} />
+          {on ? "On" : "Off"}
+        </span>
+      </h2>
+      <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">The team&apos;s computer turns on for a job and off when the work is done.</p>
+      {jobs.length > 0 && (
+        <ul className="mt-3 space-y-2.5 text-[12px]">
+          {jobs.map((j) => (
+            <li key={j.id}>
+              <span className="block font-medium">{j.title}</span>
+              <span className="mt-0.5 flex items-center justify-between gap-2 text-ink-soft">
+                <span className="flex items-center gap-1.5">
+                  <span aria-hidden className={`h-2 w-2 rounded-full ${JOB_STATUS[j.status].dot}`} />
+                  {JOB_STATUS[j.status].label}
+                </span>
+                {(j.status === "needs_you" || j.status === "failed") && <RetryJob id={j.id} />}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <ComputerControls canOpen={CAN_MANAGE.includes(ws.me.role)} on={on} />
+    </section>
   );
 }

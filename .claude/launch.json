@@ -4,8 +4,29 @@
     {
       "name": "demo",
       "runtimeExecutable": "/bin/sh",
-      "runtimeArgs": ["-c", "PATH=$HOME/.local/node/bin:$PATH NODE_ENV=test DEMO_TODAY=2026-11-02 npx next dev -p 3100"],
+      "runtimeArgs": [
+        "-c",
+        "PATH=$HOME/.local/node/bin:$PATH NODE_ENV=test DEMO_TODAY=2026-11-02 npx next dev -p 3100"
+      ],
       "port": 3100
+    },
+    {
+      "name": "live",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "PATH=$HOME/.local/node/bin:$PATH npx next dev -p 3000"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "demo-computer",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "PATH=$HOME/.local/node/bin:$PATH NODE_ENV=test DEMO_TODAY=2026-11-02 COMPUTER_API_KEY=placeholder npx next dev -p 3101"
+      ],
+      "port": 3101
     }
   ]
 }

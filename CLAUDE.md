@@ -35,7 +35,7 @@ Bot team (`src/packs/construction/roster.ts`, passed to `create_workspace()` in 
 
 ## Infrastructure
 
-- Supabase project **bidbot** (`xaxustluwpkuvfjeekfd`, us-east-1, org Maverick Takeoff Solutions). Migrations 0001 to 0003 are applied (0003_industry_packs on 11.03). The security advisor flags `create_workspace` and `accept_invite` as callable by signed in users; that is intended, anonymous callers are revoked. Schema tests run on an in process Postgres (`supabase/schema.test.ts`).
+- Supabase project **bidbot** (`xaxustluwpkuvfjeekfd`, us-east-1, org Maverick Takeoff Solutions). Migrations 0001 to 0004 are applied (0003_industry_packs and 0004_computers on 11.03). The security advisor flags `create_workspace` and `accept_invite` as callable by signed in users; that is intended, anonymous callers are revoked. Schema tests run on an in process Postgres (`supabase/schema.test.ts`).
 - GitHub: jbyrd777/BidBot, branch main.
 - Vercel: not deployed yet. Account `jesse-3234`, default team scope `skopeiq`, Hobby plan (must move to Pro before paying customers).
 
@@ -53,7 +53,7 @@ The Vercel token is in "BidBot Vercel Token.txt" on the Desktop. Keys go in env 
 
 ## Status
 
-Done: chat first bot team, approvals, tasks, memory, Vault (access settings), Settings (trade, rules, people and invites, autonomy, services), dashboard and bid board reports, workspaces with sign up, sign in, reset, company setup with sample invitations, invites by link with roles, scored routing. Core and construction pack split done (11.03). 41 tests pass; build and lint pass.
+Done: chat first bot team, approvals, tasks, memory, Vault (access settings), Settings (trade, rules, people and invites, autonomy, services), dashboard and bid board reports, workspaces with sign up, sign in, reset, company setup with sample invitations, invites by link with roles, scored routing. Core and construction pack split done (11.03). Bot computers v1 built (11.03). 49 tests pass; build and lint pass.
 
 ### Vision (11.03)
 
@@ -83,8 +83,16 @@ Autonomy ladder, set per routine, not per company. A routine moves up only after
 Next, in order:
 1. Run locally against Supabase; test sign up, setup, invite, chat, approvals end to end.
 2. Deploy a private Vercel preview with the env vars.
-3. Real inbox: Gmail and Outlook ingestion (read only) into `inbound_messages` and the parser, with a 30 day backfill on connect. Read PDF attachments.
-4. Bot email address and a morning digest routine (new invitations, what fits, what is due, which GC has not answered).
+3. Bot computers (researched 11.03; moved ahead of the inbox on 11.03 at Jesse's call). A core feature behind a provider interface, Orgo first (orgo.ai; cloud Linux desktops with Chrome, API, noVNC live view). Use a computer only where there is no direct connection: bid platform portals, GC payment portals (Textura, GCPay), prequal forms, desktop only software. Email and data stay on direct connections.
+   - One computer per workspace, started for a job and stopped after (Medium: $0.055/hr running, $0.0027/hr stopped, files kept), never always on (about $40/month each).
+   - The customer signs into each portal once, themselves, in the live view; the login stays on that computer's disk. We store no portal passwords.
+   - The VNC password is root on the computer: fetch it per session on the server, never in a `NEXT_PUBLIC_` variable, and show live view or takeover only to owners and admins.
+   - First job: after a bid decision, download the plan set and addenda overnight and attach them to the bid. Later: pay apps in GC portals (always an approval card), prequal forms.
+   - Jesse signs up for Orgo and puts the key in `.env.local` as `COMPUTER_API_KEY` (generic name, so no provider name shows in Settings); start on the $5 signup credit, Starter ($29/month) once pilots run. Ask Orgo about white label embedding and resale terms before launch.
+   - Built 11.03 (v1): `src/lib/computers` (provider contract, Orgo provider, jobs and runner), approval kind `computer_job`, Scope Analyst's `fetchPlans` skill and `fetch_plans` tool, Computer panel with live view (noVNC 1.7.0) on every bot page, migration 0004_computers. Tested with a stand in computer and against Orgo with a placeholder key. Not yet tested with a real Orgo key.
+   - Jobs run in `after()` from the server action, under the person's session. Fine locally; on Vercel a run is capped by the function's max duration, so long jobs need a worker on the computer itself or a queue before launch. Downloaded files stay on the computer for now; moving them into Supabase Storage and onto the bid is the next piece.
+4. Real inbox: Gmail and Outlook ingestion (read only) into `inbound_messages` and the parser, with a 30 day backfill on connect. Read PDF attachments.
+4a. Bot email address and a morning digest routine (new invitations, what fits, what is due, which GC has not answered).
 5. Pilot with two or three current flooring clients; invoice by hand; screen record their triage and adjust.
 5a. Before adding departments: add the autonomy ladder with a visible track record per routine. (The core and pack split is done.)
 5b. Get paid department: Billing, Bookkeeper, Compliance, plus T and M tickets by text from the foreman. Build next because recovered money is the easiest value to prove.
@@ -92,7 +100,7 @@ Next, in order:
 6. Connect Grok (env above); check tool calling works with the chosen model; meter usage into `usage_events`.
 7. Billing: Stripe test mode with flat plans and seats; no customer facing credit or stop at zero.
 8. Public launch: Vercel Pro, domain, own email sender (Resend), Stripe live, terms and privacy.
-9. Later: cloud computers (for example pulling plan sets from BuildingConnected), phone, Slack.
+9. Later: phone, Slack.
 
 ## How Jesse wants things
 

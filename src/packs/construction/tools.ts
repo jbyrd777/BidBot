@@ -1,7 +1,7 @@
 import type { PackTool } from "@/lib/team/pack";
 import type { BotId, Block } from "@/lib/team/types";
 import { card, searchBids, type EmailPurpose } from "./agent/ops";
-import { decisionCard, draftProposal, draftRfq, gcEmail, requestTakeoff, scopeSnapshot, submittalChecklist } from "./skills";
+import { decisionCard, draftProposal, draftRfq, fetchPlans, gcEmail, requestTakeoff, scopeSnapshot, submittalChecklist } from "./skills";
 import { getBid, type Bid, type ConstructionWs } from "./store";
 
 /** What the language model may do on the construction pack. Each tool belongs to one bot. */
@@ -65,6 +65,12 @@ export const TOOLS: Record<string, PackTool<ConstructionWs>> = {
     run: withBid((ws, b, a, t) => ({ text: "Queued for the person's OK.", blocks: [decisionCard(ws, b, a.decision as "bid" | "no_bid", t)] })),
   },
   scope_snapshot: { owner: "scope_analyst", description: "Scope snapshot for a bid from what is known so far.", parameters: bidArg, run: withBid((ws, b) => scopeSnapshot(ws, b)) },
+  fetch_plans: {
+    owner: "scope_analyst",
+    description: "Download a bid's plan set, specs and addenda on the company's computer. Shown for an OK unless the bot runs on its own.",
+    parameters: bidArg,
+    run: withBid((ws, b, _a, t) => fetchPlans(ws, b, t)),
+  },
   request_takeoff: { owner: "takeoff_coordinator", description: "Put a takeoff for a bid in the estimating queue.", parameters: bidArg, run: withBid((ws, b, _a, t) => requestTakeoff(ws, b, t)) },
   draft_rfq: { owner: "vendor_rfq", description: "Draft an RFQ to distributors for a bid's scope.", parameters: bidArg, run: withBid((ws, b) => draftRfq(ws, b)) },
   draft_proposal: { owner: "proposal_builder", description: "Outline a proposal for a bid. Never include a price.", parameters: bidArg, run: withBid((ws, b) => draftProposal(ws, b)) },

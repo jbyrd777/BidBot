@@ -16,8 +16,8 @@ export interface TeamBot {
   access: string[];
 }
 
-/** create_task and send_email are handled by the core; packs add their own kinds (construction: decide). */
-export type ApprovalKind = "create_task" | "send_email" | (string & {});
+/** create_task, send_email and computer_job are handled by the core; packs add their own kinds (construction: decide). */
+export type ApprovalKind = "create_task" | "send_email" | "computer_job" | (string & {});
 
 export interface Approval {
   id: string;
@@ -75,11 +75,44 @@ export interface Thread {
   messages: Message[];
 }
 
+/** The workspace's cloud computer. One per workspace, started for jobs and stopped after. */
+export interface ComputerRecord {
+  provider: string;
+  providerId: string;
+  status: "stopped" | "running";
+  /** A person opened it (to sign in to a site, say); it stays on until they close it. */
+  held?: boolean;
+}
+
+/**
+ * Work a bot does on the computer. queued: waiting to run. running: on the computer now.
+ * needs_you: the computer needs a person, usually to sign in to a site. done or failed: finished.
+ */
+export interface ComputerJob {
+  id: string;
+  at: string;
+  botId: BotId;
+  threadId: string;
+  title: string;
+  /** The task in plain words, as the computer gets it. */
+  task: string;
+  /** The pack record this job is about, such as a bid id. */
+  ref?: string;
+  status: "queued" | "running" | "needs_you" | "done" | "failed";
+  result?: string;
+  steps?: number;
+  costCents?: number;
+  startedAt?: string;
+  finishedAt?: string;
+}
+
 export interface TeamState {
   bots: TeamBot[];
   threads: Thread[];
   approvals: Approval[];
   tasks: TaskItem[];
   facts: Fact[];
+  computer?: ComputerRecord;
+  jobs: ComputerJob[];
   you: { name: string; about: string };
 }

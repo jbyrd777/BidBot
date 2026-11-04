@@ -51,6 +51,7 @@ beforeAll(async () => {
   await db.exec(readFileSync(join(__dirname, "migrations/0001_init.sql"), "utf8"));
   await db.exec(readFileSync(join(__dirname, "migrations/0002_private_helpers.sql"), "utf8"));
   await db.exec(readFileSync(join(__dirname, "migrations/0003_industry_packs.sql"), "utf8"));
+  await db.exec(readFileSync(join(__dirname, "migrations/0004_computers.sql"), "utf8"));
   await db.exec(`grant select, insert, update, delete on all tables in schema public to authenticated;`);
   await db.exec(`insert into auth.users values ('${ALICE}', 'alice@a.com'), ('${BOB}', 'bob@b.com'), ('${CARL}', 'carl@a.com');`);
   wsA = (await as(ALICE, "alice@a.com", () => one<{ id: string }>("select create_workspace('Alpha Flooring', 'construction', 'flooring', 'Alice', $1) as id", [BOTS])))!.id;
@@ -108,5 +109,21 @@ describe("workspace schema", () => {
     const inv = await as(CARL, "carl@a.com", () => rows("select * from invites"));
     expect(inv).toHaveLength(0);
     await expect(as(CARL, "carl@a.com", () => db.query("insert into usage_events (workspace_id, kind) values ($1, 'model')", [wsA]))).rejects.toThrow();
+  });
+
+  it("keeps each company's computer and its jobs to itself, and viewers cannot queue work", async () => {
+    const job = (ws: string) => ["insert into computer_jobs (id, workspace_id, bot_id, thread_bot, title, task) values (gen_random_uuid(), $1, 'scope_analyst', 'chief', 'Plans', 'Download the plans')", [ws]] as [string, string[]];
+    await as(ALICE, "alice@a.com", async () => {
+      await db.query("insert into computers (workspace_id, provider, provider_id) values ($1, 'orgo', 'pc-a')", [wsA]);
+      await db.query(...job(wsA));
+    });
+    expect(await as(BOB, "bob@b.com", () => rows("select * from computers"))).toHaveLength(0);
+    expect(await as(BOB, "bob@b.com", () => rows("select * from computer_jobs"))).toHaveLength(0);
+    await expect(as(BOB, "bob@b.com", () => db.query(...job(wsA)))).rejects.toThrow();
+    // Carl joined Alpha as a viewer: he sees the work but cannot queue any or switch the computer on.
+    expect(await as(CARL, "carl@a.com", () => rows("select * from computer_jobs"))).toHaveLength(1);
+    await expect(as(CARL, "carl@a.com", () => db.query(...job(wsA)))).rejects.toThrow();
+    const flipped = await as(CARL, "carl@a.com", () => db.query("update computers set status = 'running' where workspace_id = $1", [wsA]));
+    expect(flipped.affectedRows ?? 0).toBe(0);
   });
 });

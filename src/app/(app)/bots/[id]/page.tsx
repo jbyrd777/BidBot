@@ -8,6 +8,8 @@ export const instant = false;
 
 export async function generateMetadata({ params }: PageProps<"/bots/[id]">) {
   const { id } = await params;
+  // The title reads the signed in workspace, so it renders per request like the page.
+  await connection();
   return { title: getBot(await getWorkspace(), id)?.name ?? "Bot" };
 }
 

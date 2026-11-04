@@ -1,3 +1,4 @@
+import { queueJob } from "@/lib/computers/jobs";
 import type { AnyPack } from "./pack";
 import type { Approval, ApprovalKind, Block, BotId, Fact, Message, TaskItem, TeamBot, TeamState, Thread } from "./types";
 
@@ -27,6 +28,7 @@ export function seedTeam(pack: AnyPack, you = { name: "Jesse Byrd", about: "Owne
     approvals: [],
     tasks: [],
     facts: [],
+    jobs: [],
     you,
   };
 }
@@ -100,6 +102,10 @@ export function execute(ws: TeamHolder, a: Approval): string {
     return `Task added for ${t.owner}: ${t.title}`;
   }
   if (a.kind === "send_email") return "Sending needs a connected mailbox. Connect Gmail or Outlook in the Vault.";
+  if (a.kind === "computer_job") {
+    const job = queueJob(ws, { botId: a.botId, threadId: a.threadId, title: a.payload.title, task: a.payload.task, ref: a.payload.ref || undefined });
+    return `Queued on the computer: ${job.title}`;
+  }
   return ws.pack.execute(ws, a) ?? "That kind of change is not available here";
 }
 

@@ -1,5 +1,5 @@
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Approval, Fact, Message, TaskItem, TeamBot } from "@/lib/team/types";
+import type { Approval, ComputerJob, ComputerRecord, Fact, Message, TaskItem, TeamBot } from "@/lib/team/types";
 import type { Workspace } from "./types";
 
 /**
@@ -69,6 +69,36 @@ export async function commit(ws: Workspace) {
       .from("messages")
       .insert(messages.map((m) => ({ id: m.id, workspace_id: id, thread_bot: m.threadBot, sender: m.from, author: m.from === "user" ? by : null, text: m.text, blocks: m.blocks, created_at: m.at })));
     fail("messages", error);
+  }
+
+  for (const c of of("computers")) {
+    const k = c.row as ComputerRecord;
+    const { error } = await sb.from("computers").upsert({ workspace_id: id, provider: k.provider, provider_id: k.providerId, status: k.status, held: !!k.held, updated_at: new Date().toISOString() });
+    fail("the computer", error);
+  }
+
+  const jobs = of("computer_jobs").map((c) => c.row as ComputerJob);
+  if (jobs.length) {
+    const { error } = await sb.from("computer_jobs").upsert(
+      jobs.map((j) => ({
+        id: j.id,
+        workspace_id: id,
+        bot_id: j.botId,
+        thread_bot: j.threadId.replace(/^t-/, ""),
+        title: j.title,
+        task: j.task,
+        ref: j.ref ?? null,
+        status: j.status,
+        result: j.result?.slice(0, 8000) ?? null,
+        steps: j.steps ?? null,
+        cost_cents: j.costCents ?? null,
+        requested_by: by,
+        created_at: j.at,
+        started_at: j.startedAt ?? null,
+        finished_at: j.finishedAt ?? null,
+      })),
+    );
+    fail("computer jobs", error);
   }
 
   for (const c of of("facts")) {

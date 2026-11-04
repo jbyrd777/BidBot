@@ -71,6 +71,14 @@ export function localReply(ws: BidHolder, message: string): ChatReply {
     const list = searchBids(ws, { outsideServiceArea: true });
     return { from: "Bid Desk", text: list.length ? `${plural(list.length, "invitation")} outside your service area. Say "pass on the ones outside our area" to clear them.` : "Every invitation with a location is inside your service area.", blocks: list.length ? [{ type: "bids", title: "Outside the service area", bids: list.map(card) }] : [] };
   }
+  if (has(s, "best suited", "best fit", "good fit", "fit us", "fits us", "should we bid", "worth bidding", "recommend", "vet", "which ones")) {
+    const list = searchBids(ws, { recommendation: "bid", decision: "pending" });
+    return {
+      from: "Bid Desk",
+      text: list.length ? `${plural(list.length, "bid")} ${list.length === 1 ? "looks" : "look"} like a fit and still need a call: inside your service area, enough lead time, and your scope named. Soonest first.` : "Nothing undecided passes every screen right now. Ask what needs a look to see the close calls.",
+      blocks: list.length ? [{ type: "bids", title: "Looks like a fit", bids: list.map(card) }] : [],
+    };
+  }
   if (has(s, "waiting", "undecided", "pending", "need a call", "decide")) {
     return { from: "Bid Desk", text: pending.length ? `${plural(pending.length, "bid")} waiting on a call, soonest first.` : "Every bid has a call.", blocks: pending.length ? [{ type: "bids", title: "Waiting on a call", bids: pending.map(card) }] : [] };
   }

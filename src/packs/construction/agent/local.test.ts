@@ -16,6 +16,13 @@ describe("built-in chat responder", () => {
     expect(r.text).toMatch(/due this week/);
   });
 
+  it("lists the bids that fit when asked which suit us", () => {
+    const r = localReply(ws, "vetting out projects best suited for me");
+    expect(r.blocks[0]?.type).toBe("bids");
+    const b = r.blocks[0];
+    if (b?.type === "bids") expect(b.bids.every((x) => x.recommendation === "bid" && x.decision === "pending")).toBe(true);
+  });
+
   it("turns a pass request into confirm cards, not changes", () => {
     const r = localReply(ws, "Pass on the ones outside our area");
     expect(r.blocks.length).toBeGreaterThan(0);

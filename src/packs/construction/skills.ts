@@ -1,5 +1,6 @@
 import { formatDue } from "@/components/labels";
 import type { SkillResult } from "@/lib/team/pack";
+import { providerOn } from "@/lib/providers";
 import { change } from "@/lib/team/store";
 import type { BotId, Block } from "@/lib/team/types";
 import { card, draftEmail, type EmailPurpose } from "./agent/ops";
@@ -102,4 +103,29 @@ export function gcEmail(ws: ConstructionWs, b: Bid, purpose: EmailPurpose): Skil
 
 export function decisionCard(ws: ConstructionWs, b: Bid, decision: "bid" | "no_bid", threadBot: BotId): Block {
   return change(ws, "bid_desk", threadBot, "decide", `Mark ${b.projectName} as ${decision === "bid" ? "bidding" : "not bidding"}`, { bidId: b.id, decision });
+}
+
+/** Download a bid's plans, specs and addenda on the company's computer. Needs an OK unless the bot runs on its own. */
+export function fetchPlans(ws: ConstructionWs, b: Bid, threadBot: BotId): SkillResult {
+  if (!providerOn("computers")) {
+    return {
+      text: `I download plans on the team's computer, and none is set up yet. Until then, the plan links for ${b.projectName} are on the bid.`,
+      blocks: [{ type: "notice", tone: "info", text: "Add a computer key in Settings and I can pull plan sets for you, overnight if you like.", href: "/settings", cta: "Open Settings" }],
+    };
+  }
+  if (!b.links.length) {
+    return { text: `The invitation for ${b.projectName} has no plan link. Paste the link to the plans and I will download them on the computer.`, blocks: [] };
+  }
+  const folder = `~/Plans/${b.id}`;
+  const task = [
+    `Download the full plan set, the specifications and every addendum for the project "${b.projectName}"${b.gcName ? ` from ${b.gcName}` : ""}.`,
+    `Start from these links: ${b.links.map((l) => `${l.label}: ${l.url}`).join("; ")}.`,
+    `Save everything in ${folder}, keeping the site's file names.`,
+    `When you finish, list the files you saved with their sizes, and say whether the ${trade(ws).noun} finish schedule or specs were among them.`,
+  ].join(" ");
+  const sites = [...new Set(b.links.map((l) => l.label))].join(" and ");
+  return {
+    text: `I can download the plans for ${b.projectName} from ${sites} on the computer. If ${sites} needs you signed in, I will ask you to sign in yourself first.`,
+    blocks: [change(ws, "scope_analyst", threadBot, "computer_job", `Download the plans for ${b.projectName} on the computer`, { title: `Plans for ${b.projectName}`, task, ref: b.id })],
+  };
 }

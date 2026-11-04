@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { allFixtures } from "@/packs/construction/itb/__fixtures__/emails";
 import { ingest, loadSamples, rescreen } from "@/packs/construction/store";
+import { hasQueued, retryJob, runJobs, startComputer, stopComputer } from "@/lib/computers/jobs";
+import { computerProvider } from "@/lib/computers/provider";
 import { respond } from "@/lib/team/engine";
 import { forget, getBot, remember, renameMainBot, resolve, setAutonomy, startingBots, toggleAccess } from "@/lib/team/store";
 import type { BotId } from "@/lib/team/types";
@@ -14,9 +17,20 @@ import { DEFAULT_PACK, packFor } from "@/packs";
 import { supabaseServer } from "@/lib/supabase/server";
 import { commit } from "@/lib/workspace/commit";
 import { getWorkspace, WS_COOKIE } from "@/lib/workspace/load";
-import { CAN_APPROVE, CAN_MANAGE, type Role } from "@/lib/workspace/types";
+import { CAN_APPROVE, CAN_MANAGE, type Role, type Workspace } from "@/lib/workspace/types";
 
 const denied = (what: string) => new Error(`Your role can't ${what}. Ask an owner or admin.`);
+
+const computerName = (ws: Workspace) => `bidbot-${ws.id.slice(0, 8)}`;
+
+/** Run queued computer jobs once the response is sent, under the same person's session. */
+function runQueuedJobs(ws: Workspace) {
+  if (!hasQueued(ws)) return;
+  after(async () => {
+    const fresh = await getWorkspace();
+    await runJobs(fresh.id, fresh, commit, computerName(fresh));
+  });
+}
 
 export async function sendMessage(botId: string, text: string) {
   const clean = text.trim().slice(0, 4000);
@@ -24,6 +38,7 @@ export async function sendMessage(botId: string, text: string) {
   if (!clean || !getBot(ws, botId)) return;
   await respond(ws, botId as BotId, clean);
   await commit(ws);
+  runQueuedJobs(ws);
   revalidatePath("/", "layout");
 }
 
@@ -33,6 +48,7 @@ export async function routeTo(text: string, to: string) {
   if (!getBot(ws, to)) return;
   await respond(ws, "chief", text, { to: to as BotId, repost: false });
   await commit(ws);
+  runQueuedJobs(ws);
   revalidatePath("/", "layout");
 }
 
@@ -41,6 +57,52 @@ export async function answerApproval(id: string, ok: boolean) {
   if (!CAN_APPROVE.includes(ws.me.role)) throw denied("approve bot actions");
   resolve(ws, id, ok);
   await commit(ws);
+  runQueuedJobs(ws);
+  revalidatePath("/", "layout");
+}
+
+// The computer -----------------------------------------------------------------------
+
+/**
+ * Start the computer for a person and hand back what the live view needs. The password controls the
+ * whole computer, so only owners and admins get it, and only for this session.
+ */
+export async function openComputer(): Promise<{ url?: string; password?: string; error?: string }> {
+  const ws = await getWorkspace();
+  if (!CAN_MANAGE.includes(ws.me.role)) return { error: "Only owners and admins can open the computer." };
+  const provider = await computerProvider();
+  if (!provider) return { error: "No computer is set up yet. Add a computer key in Settings." };
+  try {
+    const id = await startComputer(ws, provider, computerName(ws), true);
+    await commit(ws);
+    revalidatePath("/", "layout");
+    return await provider.viewer(id);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+export async function closeComputer() {
+  const ws = await getWorkspace();
+  if (!CAN_MANAGE.includes(ws.me.role)) throw denied("close the computer");
+  const provider = await computerProvider();
+  if (!provider) return;
+  if (ws.team.jobs.some((j) => j.status === "running")) {
+    // A job is on it: hand the computer back to the runner, which stops it when the work is done.
+    if (ws.team.computer) ws.team.computer.held = false;
+    ws.changes.push({ table: "computers", op: "upsert", row: ws.team.computer });
+  } else await stopComputer(ws, provider);
+  await commit(ws);
+  runQueuedJobs(ws);
+  revalidatePath("/", "layout");
+}
+
+export async function retryComputerJob(id: string) {
+  const ws = await getWorkspace();
+  if (!CAN_APPROVE.includes(ws.me.role)) throw denied("run computer jobs");
+  retryJob(ws, id);
+  await commit(ws);
+  runQueuedJobs(ws);
   revalidatePath("/", "layout");
 }
 

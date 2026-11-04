@@ -3,10 +3,11 @@ import { getBot } from "@/lib/team/store";
 import type { BotId, Block } from "@/lib/team/types";
 import { localReply } from "./agent/local";
 import { findBid, findGcBids } from "./agent/ops";
-import { decisionCard, draftProposal, draftRfq, gcEmail, requestTakeoff, scopeSnapshot, submittalChecklist } from "./skills";
+import { decisionCard, draftProposal, draftRfq, fetchPlans, gcEmail, requestTakeoff, scopeSnapshot, submittalChecklist } from "./skills";
 import { listBids, type Bid, type ConstructionWs } from "./store";
 
 const has = (s: string, ...w: string[]) => w.some((x) => s.includes(x));
+const wantsPlans = (s: string) => /\b(download|pull|grab|get|fetch)\b.*\b(plans?|drawings|specs?|addend)/.test(s);
 
 function targetBid(ws: ConstructionWs, text: string): Bid | undefined {
   return findBid(ws, text) ?? findGcBids(ws, text.toLowerCase())[0];
@@ -22,6 +23,7 @@ export function reply(ws: ConstructionWs, bot: BotId, text: string, threadBot: B
   const bid = targetBid(ws, text);
   switch (bot) {
     case "scope_analyst":
+      if (wantsPlans(s)) return bid ? fetchPlans(ws, bid, threadBot) : ask("download the plans");
       return bid ? scopeSnapshot(ws, bid) : ask("write the scope snapshot");
     case "takeoff_coordinator":
       return bid ? requestTakeoff(ws, bid, threadBot) : ask("queue the takeoff");

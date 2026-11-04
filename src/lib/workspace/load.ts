@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { packFor, type PackState } from "@/packs";
 import { dbConfigured } from "@/lib/supabase/env";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Approval, BotId, Fact, TaskItem, TeamBot, Thread } from "@/lib/team/types";
+import type { Approval, BotId, ComputerJob, Fact, TaskItem, TeamBot, Thread } from "@/lib/team/types";
 import { demoWorkspace } from "./demo";
 import type { Role, Workspace } from "./types";
 
@@ -45,13 +45,15 @@ async function loadWorkspace(): Promise<Workspace | "signed_out" | "no_workspace
   const me = memberships.find((m) => m.workspace_id === wanted) ?? memberships[0];
   const wsId = me.workspace_id as string;
 
-  const [w, bots, msgs, approvals, tasks, facts] = await Promise.all([
+  const [w, bots, msgs, approvals, tasks, facts, computer, jobs] = await Promise.all([
     sb.from("workspaces").select("*").eq("id", wsId).single(),
     sb.from("bots").select("*").eq("workspace_id", wsId).order("sort"),
     sb.from("messages").select("*").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(600),
     sb.from("approvals").select("*").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(300),
     sb.from("tasks").select("*").eq("workspace_id", wsId).order("created_at"),
     sb.from("facts").select("*").eq("workspace_id", wsId).order("created_at"),
+    sb.from("computers").select("*").eq("workspace_id", wsId).maybeSingle(),
+    sb.from("computer_jobs").select("*").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(50),
   ]);
   if (w.error || !w.data) throw new Error(`Could not load the workspace: ${w.error?.message ?? "not found"}`);
 
@@ -79,6 +81,25 @@ async function loadWorkspace(): Promise<Workspace | "signed_out" | "no_workspace
       ),
       tasks: ((tasks.data ?? []) as Row[]).map((t) => ({ id: t.id, at: t.created_at, title: t.title, owner: t.owner, ref: t.ref ?? undefined, due: t.due ?? undefined, status: t.status }) as TaskItem),
       facts: ((facts.data ?? []) as Row[]).map((f) => ({ id: f.id, at: f.created_at, text: f.text, botId: f.bot_id }) as Fact),
+      computer: computer.data ? { provider: computer.data.provider, providerId: computer.data.provider_id, status: computer.data.status, held: computer.data.held } : undefined,
+      jobs: ((jobs.data ?? []) as Row[]).reverse().map(
+        (j) =>
+          ({
+            id: j.id,
+            at: j.created_at,
+            botId: j.bot_id,
+            threadId: `t-${j.thread_bot}`,
+            title: j.title,
+            task: j.task,
+            ref: j.ref ?? undefined,
+            status: j.status,
+            result: j.result ?? undefined,
+            steps: j.steps ?? undefined,
+            costCents: j.cost_cents ?? undefined,
+            startedAt: j.started_at ?? undefined,
+            finishedAt: j.finished_at ?? undefined,
+          }) as ComputerJob,
+      ),
       you: { name: (me.display_name as string) || user.email || "You", about: (me.about as string) ?? "" },
     },
     me: { userId: user.id, role: me.role as Role, name: (me.display_name as string) || user.email || "You", about: (me.about as string) ?? "", email: user.email ?? undefined },
